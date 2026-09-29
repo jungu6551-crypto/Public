@@ -1735,6 +1735,7 @@
       renderMyCard();
       unsubMy = ref.onSnapshot(function(snap){
         state.myDoc = snap.exists ? snap.data() : { name: state.myName, hourlyRate: 0, clockInAt: null };
+        hideInitError();
         renderMyCard();
       }, function(err){ console.error('my doc subscribe error', err); showInitError('실시간 동기화가 끊어졌습니다: ' + describeErr(err)); });
 
