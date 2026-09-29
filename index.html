@@ -672,7 +672,9 @@
   var BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzrnvKNOgeeD1MzgQFHdPV3bYENt6D4Twgzr7QGL246GLw4D1mF3TJ6tczdeLG3HaSSfQ/exec';
   var ADMIN_NAMES = ['강준구'];
 
-  function apiGet(params){
+  function sleep(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+
+  function apiGetOnce(params){
     var qs = Object.keys(params).map(function(k){
       return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]);
     }).join('&');
@@ -682,6 +684,14 @@
     }).then(function(res){
       if (!res || res.ok === false) throw { code: 'invalid_argument', message: (res && res.error) || 'request failed' };
       return res;
+    });
+  }
+  // Apps Script occasionally answers a plain GET with a transient 404/network
+  // hiccup (its redirect-to-content step racing under load). Reads are safe
+  // to retry, so absorb one flaky attempt before surfacing it as an error.
+  function apiGet(params){
+    return apiGetOnce(params).catch(function(err){
+      return sleep(700).then(function(){ return apiGetOnce(params); });
     });
   }
   function apiPost(body){
