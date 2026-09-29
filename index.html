@@ -1427,6 +1427,8 @@
         createdAt: Date.now()
       }).then(function(){
         return ref.update({ clockInAt: null, updatedAt: Date.now() });
+      }).then(function(){
+        hideInitError();
       }).catch(function(err){
         console.error('clock-out failed', err);
         showInitError('퇴근 기록 저장에 실패했습니다: ' + describeErr(err));
@@ -1434,7 +1436,9 @@
         busy = false; els.clockBtn.disabled = !state.ready;
       });
     } else {
-      ref.update({ clockInAt: Date.now(), updatedAt: Date.now() }).catch(function(err){
+      ref.update({ clockInAt: Date.now(), updatedAt: Date.now() }).then(function(){
+        hideInitError();
+      }).catch(function(err){
         console.error('clock-in failed', err);
         showInitError('출근 기록 저장에 실패했습니다: ' + describeErr(err));
       }).finally(function(){
