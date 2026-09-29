@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>초과근무 기록부</title>
+<style>
+  *{ box-sizing:border-box; }
+  html, body{ margin:0; padding:0; }
+  :root{
+    --bg:#F1F4FB;
+    --surface:#FFFFFF;
+    --surface-2:#EEF2FE;
+    --ink:#101529;
+    --muted:#5B6478;
+    --muted-2:#8C93A6;
+    --hero-1:#0B1330;
+    --hero-2:#1B2A5E;
+    --brand:#3B5BFF;
+    --brand-ink:#2542D6;
+    --brand-soft:#E3E8FF;
+    --brand-contrast:#FFFFFF;
+    --duty:#22C55E;
+    --duty-ink:#158A45;
+    --duty-soft:#DDF6E4;
+    --pending:#F0A93B;
+    --pending-soft:#FCEACB;
+    --off:#B7BECF;
+    --stop:#E5573F;
+    --stop-soft:#FCE3DD;
+    --line:#E1E6F2;
+    --shadow: 0 1px 2px rgba(16,21,41,.05), 0 10px 26px -14px rgba(16,21,41,.22);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0B0F1A;
+      --surface:#131A2C;
+      --surface-2:#182142;
+      --ink:#EAEDF7;
+      --muted:#98A0B8;
+      --muted-2:#6C7488;
+      --hero-1:#05070F;
+      --hero-2:#131E45;
+      --brand:#7C97FF;
+      --brand-ink:#C7D3FF;
+      --brand-soft:#1E2A54;
+      --brand-contrast:#0B0F1A;
+      --duty:#3ED67F;
+      --duty-ink:#8FF0B8;
+      --duty-soft:#123322;
+      --pending:#F0B65C;
+      --pending-soft:#3A2B0F;
+      --off:#3C4560;
+      --stop:#FF8267;
+      --stop-soft:#3A1E17;
+      --line:#232C48;
+      --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 26px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0B0F1A;
+    --surface:#131A2C;
+    --surface-2:#182142;
+    --ink:#EAEDF7;
+    --muted:#98A0B8;
+    --muted-2:#6C7488;
+    --hero-1:#05070F;
+    --hero-2:#131E45;
+    --brand:#7C97FF;
+    --brand-ink:#C7D3FF;
+    --brand-soft:#1E2A54;
+    --brand-contrast:#0B0F1A;
+    --duty:#3ED67F;
+    --duty-ink:#8FF0B8;
+    --duty-soft:#123322;
+    --pending:#F0B65C;
+    --pending-soft:#3A2B0F;
+    --off:#3C4560;
+    --stop:#FF8267;
+    --stop-soft:#3A1E17;
+    --line:#232C48;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 26px -14px rgba(0,0,0,.6);
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Noto Sans KR', -apple-system, 'Malgun Gothic', sans-serif;
+    padding:20px 16px 64px;
+    display:flex;
+    justify-content:center;
+  }
+  .app{ width:100%; max-width:880px; display:flex; flex-direction:column; gap:20px; }
+  h1,h2{ margin:0; text-wrap:balance; font-weight:900; }
+  .mono{ font-family:'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric:tabular-nums; }
+
+  /* ---- hero ---- */
+  .hero{
+    position:relative; overflow:hidden; border-radius:20px;
+    background:linear-gradient(155deg, var(--hero-2), var(--hero-1) 75%);
+    padding:22px 24px 24px; color:#F3F5FF; box-shadow:var(--shadow);
+  }
+  .hero-sparkle{ position:absolute; color:rgba(255,255,255,.5); font-size:14px; pointer-events:none; }
+  .hero-sparkle.s1{ top:18px; right:64px; font-size:18px; }
+  .hero-sparkle.s2{ top:64px; right:20px; font-size:10px; }
+  .hero-sparkle.s3{ bottom:18px; left:20%; font-size:11px; color:rgba(255,255,255,.32); }
+  .hero-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; position:relative; z-index:1; }
+  .hero-badge{
+    display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.22); color:#E7ECFF; font-size:11.5px; font-weight:700;
+    padding:6px 12px 6px 10px; border-radius:999px;
+  }
+  .hero-badge .bdot{ width:7px; height:7px; border-radius:50%; background:var(--duty); box-shadow:0 0 0 3px rgba(34,197,94,.35); }
+  .hero h1{ font-size:23px; color:#fff; margin-top:16px; position:relative; z-index:1; transition:font-size .2s, margin-top .2s; }
+  .hero-tag{ margin:6px 0 0; font-size:13px; color:#B9C2E8; line-height:1.55; position:relative; z-index:1; max-width:46ch; }
+
+  /* returning-user compact hero: skip the intro copy so the clock button sits higher on screen */
+  .hero.compact{ padding:14px 20px 16px; }
+  .hero.compact .hero-tag{ display:none; }
+  .hero.compact h1{ font-size:17px; margin-top:8px; }
+  .hero.compact .hero-sparkle{ display:none; }
+
+  .identity-chip{
+    display:flex; align-items:center; gap:8px;
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); border-radius:999px;
+    padding:7px 8px 7px 12px; font-size:13.5px; font-weight:700; color:#fff;
+  }
+  .identity-chip .dot{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.4); flex:none; }
+  .identity-chip .dot.on{ background:var(--duty); box-shadow:0 0 0 4px rgba(34,197,94,.35); }
+  .link-btn{
+    border:none; background:rgba(255,255,255,.16); color:#fff; font:inherit; font-size:11.5px; font-weight:700;
+    padding:5px 10px; border-radius:999px; cursor:pointer;
+  }
+  .link-btn:hover{ background:rgba(255,255,255,.26); }
+
+  /* ---- login ---- */
+  .login-screen{ display:flex; justify-content:center; padding:8px 0 24px; }
+  .login-card{
+    width:100%; max-width:420px; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); padding:26px 24px;
+  }
+  .login-card h2{ font-size:18px; font-weight:700; margin-bottom:8px; }
+  .login-card p{ margin:0 0 18px; font-size:13.5px; color:var(--muted); line-height:1.55; font-weight:400; }
+  .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--muted); margin-bottom:6px; }
+  .field input{
+    width:100%; font:inherit; font-size:15px; padding:11px 13px; border-radius:10px;
+    border:1px solid var(--line); background:var(--surface-2); color:var(--ink);
+  }
+  .field input:focus{ outline:2px solid var(--brand); outline-offset:1px; }
+  .primary-btn{
+    margin-top:16px; width:100%; border:none; border-radius:10px; padding:12px 16px;
+    background:var(--brand); color:var(--brand-contrast); font:inherit; font-size:15px; font-weight:700;
+    cursor:pointer;
+  }
+  .primary-btn:hover{ filter:brightness(1.06); }
+  .primary-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .hint{ margin-top:14px !important; font-size:12.5px; font-weight:400; }
+  .hint button{ border:none; background:none; color:var(--brand-ink); font:inherit; font-weight:700; cursor:pointer; padding:0; }
+
+  /* ---- my card ---- */
+  .my-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:20px 22px; display:flex; flex-direction:column; gap:16px;
+  }
+  .init-error{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:var(--stop-soft); border:1px solid var(--stop); border-radius:10px;
+    padding:11px 14px; font-size:12.5px; font-weight:600; color:var(--ink);
+  }
+  .link-btn2{
+    flex:none; border:none; background:var(--stop); color:#fff; font:inherit; font-size:12px; font-weight:700;
+    padding:6px 12px; border-radius:999px; cursor:pointer;
+  }
+  .link-btn2:hover{ filter:brightness(1.08); }
+  .my-card-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .my-status{ display:flex; align-items:center; gap:10px; }
+  .status-dot{ width:12px; height:12px; border-radius:50%; background:var(--off); flex:none; transition:background .2s; }
+  .status-dot.on{
+    background:var(--duty);
+    box-shadow:0 0 0 5px var(--duty-soft);
+    animation:pulse 1.8s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce){ .status-dot.on{ animation:none; } }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 5px var(--duty-soft);} 50%{ box-shadow:0 0 0 8px var(--duty-soft);} }
+  .my-status .name{ font-size:16.5px; font-weight:700; }
+  .my-status .state-label{ font-size:12px; color:var(--muted); font-weight:700; }
+
+  .rate-field{ display:flex; align-items:center; gap:8px; }
+  .rate-field label{ font-size:12px; color:var(--muted); font-weight:700; }
+  .rate-field .rate-wrap{ display:flex; align-items:center; gap:4px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:6px 10px; }
+  .rate-field input{
+    width:92px; border:none; background:none; font:inherit; font-size:14px; color:var(--ink); text-align:right;
+  }
+  .rate-field input:focus{ outline:none; }
+  .rate-field span{ font-size:13px; color:var(--muted); }
+
+  .hours-field{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .hours-field label{ font-size:12px; color:var(--muted); font-weight:700; flex:none; }
+  .hours-wrap{
+    display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--line);
+    border-radius:8px; padding:5px 10px;
+  }
+  .hours-wrap input{
+    width:58px; border:none; background:none; font:inherit; font-size:13.5px; color:var(--ink);
+    font-family:'IBM Plex Mono', monospace; text-align:center;
+  }
+  .hours-wrap input:focus{ outline:none; }
+  .hours-wrap span{ color:var(--muted-2); font-size:12px; }
+  .hours-hint{ font-size:11.5px; color:var(--muted-2); }
+  .hours-hint.standalone{ display:block; margin-top:-6px; }
+
+  .rule-form{
+    display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap;
+    background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+  }
+  .rule-field{ display:flex; flex-direction:column; gap:5px; }
+  .rule-field label{ font-size:11px; color:var(--muted); font-weight:700; }
+  .rule-field input{
+    width:80px; font:inherit; font-size:13.5px; padding:7px 9px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); font-family:'IBM Plex Mono', monospace; text-align:right;
+  }
+  .rule-field input:focus{ outline:2px solid var(--brand); outline-offset:1px; }
+  .rule-hint{ flex-basis:100%; font-size:11px; color:var(--muted-2); }
+
+  .clockin-edit-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    font-size:12.5px; color:var(--muted);
+  }
+  .clockin-edit-row b{ color:var(--ink); font-family:'IBM Plex Mono', monospace; font-weight:700; }
+  .clockin-edit-form{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .clockin-edit-form input{
+    width:70px; font:inherit; font-size:13.5px; padding:7px 10px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface-2); color:var(--ink); font-family:'IBM Plex Mono', monospace; text-align:center;
+  }
+  .clockin-edit-form input:focus{ outline:2px solid var(--brand); outline-offset:1px; }
+
+  .timer-row{
+    display:grid; grid-template-columns:auto 1fr; gap:22px; align-items:center;
+    background:var(--surface-2); border:1px solid var(--line); border-radius:14px; padding:18px 20px;
+  }
+  .ring-wrap{ position:relative; width:126px; height:126px; flex:none; margin:0 auto; }
+  .ring-wrap svg{ width:100%; height:100%; transform:rotate(-90deg); }
+  .ring-track{ fill:none; stroke:var(--line); stroke-width:9; }
+  .ring-progress{
+    fill:none; stroke:var(--pending); stroke-width:9; stroke-linecap:round;
+    transition:stroke-dashoffset .3s linear, stroke .3s;
+  }
+  .ring-progress.done{ stroke:var(--brand); }
+  .ring-center{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:3px;
+  }
+  .ring-time{ font-size:17px; font-weight:600; }
+  .ring-phase{ font-size:10.5px; color:var(--muted); font-weight:700; max-width:80px; line-height:1.3; }
+
+  .timer-info{ display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .stat-grid{ display:flex; gap:10px; }
+  .stat-tile{ flex:1; background:var(--brand-soft); border-radius:10px; padding:10px 13px; min-width:0; }
+  .stat-label{ font-size:10.5px; color:var(--brand-ink); font-weight:700; text-transform:uppercase; letter-spacing:.03em; opacity:.85; }
+  .stat-value{ font-size:17px; font-weight:700; color:var(--brand-ink); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .clock-btn{
+    border:none; border-radius:10px; padding:13px 20px; font:inherit; font-size:15.5px; font-weight:700;
+    cursor:pointer; color:var(--brand-contrast); background:var(--brand);
+  }
+  .clock-btn.stop{ background:var(--stop); }
+  .clock-btn:hover{ filter:brightness(1.06); }
+  .clock-btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+  /* ---- panels ---- */
+  section.panel{ display:flex; flex-direction:column; gap:12px; }
+  .panel-head{ display:flex; align-items:flex-start; gap:12px; }
+  .panel-head-text{ flex:1; min-width:0; }
+  .panel-num{
+    flex:none; width:28px; height:28px; border-radius:9px; background:var(--brand-soft); color:var(--brand-ink);
+    display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono', monospace;
+    font-weight:700; font-size:12px;
+  }
+  .panel-head-actions{ display:flex; gap:8px; flex:none; margin-top:2px; flex-wrap:wrap; }
+  .panel-head-actions .link-btn2{ flex:none; }
+  .link-btn2:disabled{ opacity:.45; cursor:not-allowed; }
+  .link-btn2.outline{ background:var(--surface); color:var(--brand-ink); border:1px solid var(--brand); }
+  .link-btn2.outline:hover{ background:var(--brand-soft); }
+
+  .manual-form{
+    display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:16px 18px;
+  }
+  .manual-field{ display:flex; flex-direction:column; gap:5px; }
+  .manual-field label{ font-size:11.5px; color:var(--muted); font-weight:700; }
+  .manual-field input{
+    width:96px; font:inherit; font-size:13.5px; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface-2); color:var(--ink); font-family:'IBM Plex Mono', monospace;
+  }
+  .manual-field input[type="date"]{ width:140px; }
+  .manual-field input:focus{ outline:2px solid var(--brand); outline-offset:1px; }
+  .manual-actions{ display:flex; gap:8px; }
+  .primary-btn-sm{
+    border:none; border-radius:8px; padding:9px 16px; font:inherit; font-size:13.5px; font-weight:700;
+    color:var(--brand-contrast); background:var(--brand); cursor:pointer;
+  }
+  .primary-btn-sm:hover{ filter:brightness(1.06); }
+  .primary-btn-sm:disabled{ opacity:.55; cursor:not-allowed; }
+  .manual-error{
+    flex-basis:100%; margin:0; font-size:12px; font-weight:600; color:var(--stop);
+  }
+  .manual-tag{
+    display:inline-block; margin-left:5px; font-size:10px; font-weight:700; color:var(--brand-ink);
+    background:var(--brand-soft); border-radius:999px; padding:1px 7px; vertical-align:middle;
+  }
+  section.panel h2{ font-size:15.5px; font-weight:700; }
+  .panel-sub{ font-size:12.5px; color:var(--muted); margin:3px 0 0; font-weight:400; }
+
+  .teacher-list{ display:flex; flex-direction:column; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; background:var(--surface); box-shadow:var(--shadow); }
+  .teacher-row{
+    display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--line);
+  }
+  .teacher-row.me{ background:var(--brand-soft); }
+  .teacher-row:last-child{ border-bottom:none; }
+  .teacher-row .dot{ width:10px; height:10px; border-radius:50%; background:var(--off); flex:none; }
+  .teacher-row .dot.on{ background:var(--duty); box-shadow:0 0 0 4px var(--duty-soft); }
+  .teacher-row .t-name{ font-weight:700; font-size:14px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .teacher-row .t-name .me-tag{ font-size:10.5px; font-weight:700; color:var(--brand-ink); margin-left:6px; }
+  .teacher-row .t-state{ font-size:12px; color:var(--muted-2); font-weight:600; }
+  .teacher-row .t-state.on{ color:var(--duty-ink); font-weight:700; }
+  .empty-row{ padding:20px 18px; font-size:13.5px; color:var(--muted); text-align:center; }
+
+  /* ---- history ---- */
+  .history-wrap{ border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
+  .table-scroll{ overflow-x:auto; }
+  .hgrid-head, .hrow-line{
+    display:grid; grid-template-columns:1fr 64px 64px 88px 116px 98px 54px; gap:8px; align-items:center;
+  }
+  .hgrid-head{
+    padding:11px 16px; background:var(--surface-2); border-bottom:1px solid var(--line);
+    font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); font-weight:700;
+  }
+  .hrow-line{ padding:11px 16px; border-bottom:1px solid var(--line); font-size:13.5px; }
+  #historyBody .hrow:last-child .hrow-line{ border-bottom:none; }
+  .hc.num{ text-align:right; }
+  .amount{ color:var(--brand-ink); font-weight:700; }
+  .hfoot{ padding:13px 16px; background:var(--surface-2); border-top:1px solid var(--line); }
+  .hfoot-line{ display:flex; align-items:baseline; justify-content:space-between; gap:14px; padding:3px 0; font-size:13.5px; }
+  .hfoot-title{ font-weight:700; font-size:14px; justify-content:flex-start; }
+  .hfoot-label{ color:var(--muted); font-weight:600; font-size:12.5px; }
+  .hfoot-value{ font-weight:700; }
+  .total-remain{ display:block; font-size:10.5px; color:var(--pending); font-weight:600; margin-top:2px; text-align:right; }
+  .afterschool-wrap{ display:inline-flex; align-items:center; gap:3px; }
+  .afterschool-input{
+    width:34px; font:inherit; font-size:13.5px; font-weight:600; padding:3px 3px; border-radius:6px;
+    border:1px solid transparent; background:transparent; color:var(--ink); text-align:right;
+    font-family:'IBM Plex Mono', monospace; transition:background .15s, border-color .15s;
+  }
+  .afterschool-input::-webkit-inner-spin-button, .afterschool-input::-webkit-outer-spin-button{ -webkit-appearance:none; margin:0; }
+  .afterschool-input{ -moz-appearance:textfield; }
+  .afterschool-input:hover{ background:var(--surface-2); border-color:var(--line); }
+  .afterschool-input:focus{ background:var(--surface-2); border-color:var(--brand); outline:2px solid var(--brand); outline-offset:1px; }
+  .afterschool-wrap span{ font-size:12px; color:var(--muted-2); }
+  .timeedit-input{
+    width:56px; font:inherit; font-size:13.5px; font-weight:600; padding:3px 4px; border-radius:6px;
+    border:1px solid transparent; background:transparent; color:var(--ink); font-family:'IBM Plex Mono', monospace;
+    text-align:center; transition:background .15s, border-color .15s;
+  }
+  .timeedit-input:hover{ background:var(--surface-2); border-color:var(--line); }
+  .timeedit-input:focus{ background:var(--surface-2); border-color:var(--brand); outline:2px solid var(--brand); outline-offset:1px; }
+  .timeedit-input:disabled{ opacity:.5; }
+  .history-empty{ padding:26px 18px; text-align:center; color:var(--muted); font-size:13.5px; }
+  .row-caret{ display:none; }
+
+  /* Below ~680px the 7-column grid gets cramped; switch each row to a stacked, tappable card. */
+  @media (max-width:680px){
+    .hgrid-head{ display:none; }
+    #historyBody .hrow{ border-bottom:1px solid var(--line); background:var(--surface); }
+    #historyBody .hrow:last-child{ border-bottom:none; }
+    .hrow-line{
+      display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+      position:relative; cursor:pointer; padding:12px 62px 12px 16px; border-bottom:none;
+    }
+    .hc{ display:flex; align-items:center; gap:4px; text-align:right; }
+    .hc.td-summary{ flex:none; font-size:14.5px; }
+    .hc.hc-date{ font-weight:600; }
+    .hc.hc-hours{ font-weight:700; color:var(--brand-ink); }
+    .hc.td-detail{
+      display:none; flex-basis:100%; width:100%; justify-content:space-between; padding:7px 0 0;
+    }
+    .hrow.expanded .hc.td-detail{ display:flex; }
+    .hrow.expanded .hc.td-detail:first-of-type{
+      margin-top:6px; padding-top:10px; border-top:1px dashed var(--line);
+    }
+    .hc::before{
+      content: attr(data-label); font-size:11.5px; font-weight:700; color:var(--muted); text-align:left; flex:none;
+    }
+    .hc[data-label=""]::before{ content:none; }
+    .hc.hc-del{
+      position:absolute; top:10px; right:16px; padding:0; width:auto; display:none;
+    }
+    .hrow.expanded .hc.hc-del{ display:flex; }
+    .hc.hc-del .del-btn{ padding:5px 11px; }
+    .row-caret{
+      display:inline-block; margin-left:2px; color:var(--muted-2); font-size:15px;
+      transition:transform .15s;
+    }
+    .hrow.expanded .row-caret{ transform:rotate(180deg); color:var(--brand-ink); }
+  }
+  .del-btn{
+    border:none; background:none; color:var(--muted-2); font:inherit; font-size:12px; font-weight:700;
+    padding:4px 9px; border-radius:999px; cursor:pointer; white-space:nowrap;
+  }
+  .del-btn:hover{ color:var(--stop); background:var(--stop-soft); }
+  .del-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .del-btn.confirm{ color:#fff; background:var(--stop); }
+  .del-btn.confirm:hover{ color:#fff; background:var(--stop); filter:brightness(1.08); }
+
+  .monthly-wrap{ display:flex; flex-direction:column; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; background:var(--surface); box-shadow:var(--shadow); }
+  .monthly-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .monthly-row:last-child{ border-bottom:none; }
+  .monthly-row .m-label{ font-weight:700; font-size:14.5px; flex:none; min-width:76px; }
+  .monthly-row .m-detail{ flex:1; min-width:180px; display:flex; flex-direction:column; gap:2px; }
+  .monthly-row .m-detail .m-line{ font-size:12.5px; color:var(--muted); }
+  .monthly-row .m-detail .m-line b{ color:var(--ink); font-weight:700; font-family:'IBM Plex Mono', monospace; }
+  .monthly-row .m-detail .m-short{ font-size:11.5px; color:var(--pending); font-weight:600; }
+  .monthly-row .m-amount{ font-weight:700; color:var(--brand-ink); font-family:'IBM Plex Mono', monospace; font-size:15.5px; flex:none; }
+
+  @media (max-width:560px){
+    .timer-row{ grid-template-columns:1fr; }
+    .stat-grid{ }
+    .clock-btn{ width:100%; }
+    .my-card-top{ flex-direction:column; align-items:flex-start; }
+    .hero h1{ font-size:20px; }
+    .manual-form{ flex-direction:column; align-items:stretch; }
+    .manual-field input{ width:100%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hero" id="hero">
+    <span class="hero-sparkle s1" aria-hidden="true">✦</span>
+    <span class="hero-sparkle s2" aria-hidden="true">✦</span>
+    <span class="hero-sparkle s3" aria-hidden="true">✦</span>
+    <div class="hero-top">
+      <span class="hero-badge"><span class="bdot" aria-hidden="true"></span>실시간 근무 현황 공유</span>
+      <div id="identityChip" class="identity-chip" hidden>
+        <span class="dot" id="chipDot"></span>
+        <span id="chipName"></span>
+        <button id="switchIdBtn" class="link-btn" type="button">전환</button>
+      </div>
+    </div>
+    <h1>초과근무 기록부</h1>
+    <p class="hero-tag">출근·퇴근을 누르면 정규 근무시간 이외의 시간을 기준으로, 하루 1시간을 공제해 수당을 자동으로 계산합니다</p>
+  </header>
+
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <h2>아이디로 시작하기</h2>
+      <p>이름(또는 별명)을 입력하세요. 처음 입력하면 새로 등록되고, 같은 이름으로 다시 들어오면 이전 기록이 이어집니다.</p>
+      <div class="field">
+        <label for="nameInput">이름</label>
+        <input id="nameInput" type="text" placeholder="예: 김민준" autocomplete="off" maxlength="24" />
+      </div>
+      <button id="startBtn" class="primary-btn" type="button">시작하기</button>
+      <p class="hint" id="recentHint" hidden>최근에 <button id="recentBtn" type="button"></button>(으)로 사용했어요</p>
+    </div>
+  </section>
+
+  <main id="mainApp" hidden style="display:flex; flex-direction:column; gap:20px;">
+    <section class="my-card">
+      <div class="my-card-top">
+        <div class="my-status">
+          <span class="status-dot" id="myStatusDot"></span>
+          <div>
+            <div class="name" id="myName">-</div>
+            <div class="state-label" id="myStateLabel">대기중</div>
+          </div>
+        </div>
+        <div class="rate-field">
+          <label for="rateInput">시간당 금액</label>
+          <div class="rate-wrap">
+            <input id="rateInput" type="number" min="0" step="500" inputmode="numeric" />
+            <span>원</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hours-field">
+        <label>정규 근무시간</label>
+        <div class="hours-wrap">
+          <input id="workStartInput" type="text" inputmode="numeric" maxlength="5" placeholder="08:50" />
+          <span>~</span>
+          <input id="workEndInput" type="text" inputmode="numeric" maxlength="5" placeholder="16:50" />
+        </div>
+        <button id="ruleToggleBtn" class="link-btn2 outline" type="button">계산 규칙 수정</button>
+      </div>
+
+      <div id="ruleForm" class="rule-form" hidden>
+        <div class="rule-field">
+          <label for="morningMinInput">출근 전 최소 인정(분)</label>
+          <input id="morningMinInput" type="number" min="0" step="5" />
+        </div>
+        <div class="rule-field">
+          <label for="dailyDeductInput">하루 공제(분)</label>
+          <input id="dailyDeductInput" type="number" min="0" step="5" />
+        </div>
+        <div class="rule-field">
+          <label for="dailyCapInput">하루 최대 인정(분)</label>
+          <input id="dailyCapInput" type="number" min="0" step="5" />
+        </div>
+        <span class="rule-hint">학교 규정에 맞게 조정하세요 (기본값 60 / 60 / 240분)</span>
+      </div>
+
+      <span class="hours-hint standalone">출근 전 근무는 위 '최소 인정' 시간 미만이면 인정 안 되고, 인정된 시간 합계에서 '하루 공제' 시간만큼 뺀 뒤 '하루 최대 인정' 시간까지만 계산돼요</span>
+
+      <div class="clockin-edit-row" id="clockInEditRow" hidden>
+        <span>오늘 출근 시간 <b id="clockInDisplay">-</b></span>
+        <button id="editClockInBtn" class="link-btn2 outline" type="button">시간 수정</button>
+      </div>
+      <div class="clockin-edit-form" id="clockInEditForm" hidden>
+        <input id="clockInEditInput" type="text" inputmode="numeric" maxlength="5" placeholder="07:55" />
+        <button id="clockInSaveBtn" class="primary-btn-sm" type="button">저장</button>
+        <button id="clockInCancelBtn" class="link-btn" type="button">취소</button>
+      </div>
+
+      <div id="initError" class="init-error" hidden>
+        <span id="initErrorMsg">근무 기록을 불러오지 못했습니다. 다시 시도해주세요.</span>
+        <button id="retryInitBtn" class="link-btn2" type="button">다시 시도</button>
+      </div>
+
+      <div class="timer-row">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="ring-track" cx="50" cy="50" r="42"></circle>
+            <circle class="ring-progress" id="ringProgress" cx="50" cy="50" r="42"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-time mono" id="timerClock">00:00:00</div>
+            <div class="ring-phase" id="ringPhase">대기중</div>
+          </div>
+        </div>
+        <div class="timer-info">
+          <div class="stat-grid">
+            <div class="stat-tile">
+              <div class="stat-label">초과근무 시간</div>
+              <div class="stat-value mono" id="netHoursOut">0.00시간</div>
+            </div>
+            <div class="stat-tile">
+              <div class="stat-label">예상 수당</div>
+              <div class="stat-value mono" id="estPayOut">0원</div>
+            </div>
+          </div>
+          <button id="clockBtn" class="clock-btn" type="button">출근</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="boardPanel" hidden>
+      <div class="panel-head">
+        <span class="panel-num">01</span>
+        <div class="panel-head-text">
+          <h2>전체 근무 현황</h2>
+          <p class="panel-sub">관리자에게만 보여요 · 초록불이 켜진 사람은 현재 초과근무 중입니다</p>
+        </div>
+      </div>
+      <div class="teacher-list" id="teacherList">
+        <div class="empty-row">등록된 사람이 없습니다</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <span class="panel-num" id="historyPanelNum">02</span>
+        <div class="panel-head-text">
+          <h2>내 근무 내역</h2>
+          <p class="panel-sub">방과후 수업 시간(분)을 입력하면 그만큼 초과근무 시간에서 빠집니다</p>
+        </div>
+        <div class="panel-head-actions">
+          <button id="manualAddBtn" class="link-btn2 outline" type="button" disabled>+ 직접 입력</button>
+          <button id="exportBtn" class="link-btn2" type="button" disabled>엑셀로 저장</button>
+        </div>
+      </div>
+
+      <div id="manualForm" class="manual-form" hidden>
+        <div class="manual-field">
+          <label for="manualDate">날짜</label>
+          <input id="manualDate" type="date" />
+        </div>
+        <div class="manual-field">
+          <label for="manualIn">출근시간</label>
+          <input id="manualIn" type="text" inputmode="numeric" maxlength="5" placeholder="07:55" />
+        </div>
+        <div class="manual-field">
+          <label for="manualOut">퇴근시간</label>
+          <input id="manualOut" type="text" inputmode="numeric" maxlength="5" placeholder="16:50" />
+        </div>
+        <div class="manual-actions">
+          <button id="manualSaveBtn" class="primary-btn-sm" type="button">저장</button>
+          <button id="manualCancelBtn" class="link-btn" type="button">취소</button>
+        </div>
+        <p class="manual-error" id="manualError" hidden></p>
+      </div>
+
+      <div class="history-wrap">
+        <div class="table-scroll">
+          <div class="hgrid-head">
+            <span class="hc hc-date">날짜</span>
+            <span class="hc hc-in">출근</span>
+            <span class="hc hc-out">퇴근</span>
+            <span class="hc hc-after num">방과후 차감</span>
+            <span class="hc hc-hours num">초과근무 시간</span>
+            <span class="hc hc-amount num">금액</span>
+            <span class="hc hc-del"></span>
+          </div>
+          <div id="historyBody">
+            <div class="history-empty">아직 기록이 없습니다</div>
+          </div>
+          <div id="historyFoot" class="hfoot" hidden>
+            <div class="hfoot-line hfoot-title"><span>합계</span></div>
+            <div class="hfoot-line">
+              <span class="hfoot-label">초과근무 시간</span>
+              <span class="hfoot-value mono"><span id="totalHours">-</span><span class="total-remain" id="totalRemain"></span></span>
+            </div>
+            <div class="hfoot-line">
+              <span class="hfoot-label">금액</span>
+              <span class="hfoot-value amount mono" id="totalAmount">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <span class="panel-num" id="monthlyPanelNum">03</span>
+        <div class="panel-head-text">
+          <h2>월별 정산</h2>
+          <p class="panel-sub">하루 최대 4시간까지 산정되며, 월 합계는 분 단위를 절사해 정수 시간으로 지급돼요</p>
+        </div>
+      </div>
+      <div class="monthly-wrap" id="monthlyWrap">
+        <div class="empty-row">아직 기록이 없습니다</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var HOUR_MS = 3600000;
+  var RING_R = 42;
+  var RING_C = 2 * Math.PI * RING_R;
+
+  function cyrb(str){
+    var h1 = 0xdeadbeef ^ str.length, h2 = 0x41c6ce57 ^ str.length;
+    for (var i = 0; i < str.length; i++) {
+      var ch = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+    var out = 4294967296 * (2097151 & h2) + (h1 >>> 0);
+    return out.toString(36);
+  }
+  function nameToId(name){ return 't' + cyrb(name.trim()); }
+
+  // ---- backend (Google Apps Script web app, replaces the Claude db capability) ----
+  var BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzrnvKNOgeeD1MzgQFHdPV3bYENt6D4Twgzr7QGL246GLw4D1mF3TJ6tczdeLG3HaSSfQ/exec';
+  var ADMIN_NAMES = ['강준구'];
+
+  function apiGet(params){
+    var qs = Object.keys(params).map(function(k){
+      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]);
+    }).join('&');
+    return fetch(BACKEND_URL + '?' + qs).then(function(r){
+      if (!r.ok) throw { code: 'unavailable', message: 'HTTP ' + r.status };
+      return r.json();
+    }).then(function(res){
+      if (!res || res.ok === false) throw { code: 'invalid_argument', message: (res && res.error) || 'request failed' };
+      return res;
+    });
+  }
+  function apiPost(body){
+    return fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    }).then(function(r){
+      if (!r.ok) throw { code: 'unavailable', message: 'HTTP ' + r.status };
+      return r.json();
+    }).then(function(res){
+      if (!res || res.ok === false) throw { code: 'invalid_argument', message: (res && res.error) || 'request failed' };
+      return res;
+    });
+  }
+
+  function backendDocRef(path){
+    var parts = path.split('/');
+    var col = parts[0], id = parts[1];
+    var isTeacher = col === 'teachers';
+    var getAction = isTeacher ? 'getTeacher' : 'getSession';
+    var setAction = isTeacher ? 'setTeacher' : 'setSession';
+    var updateAction = isTeacher ? 'updateTeacher' : 'updateSession';
+    var deleteAction = isTeacher ? 'deleteTeacher' : 'deleteSession';
+    function fetchSnap(){
+      return apiGet({ action: getAction, id: id }).then(function(res){
+        var data = res.data || null;
+        return { id: id, exists: !!data, data: function(){ return data; } };
+      });
+    }
+    return {
+      id: id,
+      path: path,
+      get: fetchSnap,
+      set: function(data){
+        var payload = {}; for (var k in data) payload[k] = data[k];
+        payload.id = id;
+        return apiPost({ action: setAction, data: payload }).then(function(){});
+      },
+      update: function(patch){
+        return apiPost({ action: updateAction, id: id, patch: patch }).then(function(){});
+      },
+      delete: function(){
+        return apiPost({ action: deleteAction, id: id }).then(function(){});
+      },
+      onSnapshot: function(next, errCb){
+        var stopped = false;
+        function poll(){
+          if (stopped) return;
+          fetchSnap().then(function(snap){ if (!stopped) next(snap); }).catch(function(err){ if (!stopped && errCb) errCb(err); });
+        }
+        poll();
+        var iv = setInterval(poll, 4000);
+        return function(){ stopped = true; clearInterval(iv); };
+      }
+    };
+  }
+
+  function backendCollectionRef(name){
+    var teacherIdFilter = null;
+    var ref = {
+      doc: function(id){ return backendDocRef(name + '/' + id); },
+      add: function(data){
+        return apiPost({ action: 'addSession', data: data }).then(function(res){
+          return backendDocRef(name + '/' + res.id);
+        });
+      },
+      where: function(field, op, value){ teacherIdFilter = value; return ref; },
+      orderBy: function(){ return ref; },
+      limit: function(){ return ref; },
+      onSnapshot: function(next, errCb){
+        var stopped = false;
+        var isTeachers = (name === 'teachers');
+        function poll(){
+          if (stopped) return;
+          var req = isTeachers ? apiGet({ action: 'listTeachers' }) : apiGet({ action: 'listSessions', teacherId: teacherIdFilter });
+          req.then(function(res){
+            if (stopped) return;
+            var rows = res.data || [];
+            var docs = rows.map(function(r){ return { id: r.id, data: function(){ return r; } }; });
+            next({ docs: docs });
+          }).catch(function(err){ if (!stopped && errCb) errCb(err); });
+        }
+        poll();
+        var iv = setInterval(poll, isTeachers ? 5000 : 8000);
+        return function(){ stopped = true; clearInterval(iv); };
+      }
+    };
+    return ref;
+  }
+
+  function makeBackend(){
+    return { doc: backendDocRef, collection: backendCollectionRef };
+  }
+
+  function pad(n){ return (n<10?'0':'')+n; }
+  function fmtClock(ms){
+    if (ms < 0) ms = 0;
+    var s = Math.floor(ms/1000);
+    var h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    return pad(h)+':'+pad(m)+':'+pad(sec);
+  }
+  function fmtHoursNum(ms){ return (ms / HOUR_MS).toFixed(2); }
+  function fmtWon(n){
+    n = Math.round(n || 0);
+    return n.toLocaleString('ko-KR') + '원';
+  }
+  function fmtDate(ts){
+    var d = new Date(ts);
+    return (d.getMonth()+1)+'/'+d.getDate();
+  }
+  function fmtTime(ts){
+    var d = new Date(ts);
+    return pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  function fmtDateTime(ts){
+    var d = new Date(ts);
+    return (d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+
+  function timeStrToTs(baseTs, hhmm){
+    var parts = String(hhmm||'').split(':');
+    var h = parseInt(parts[0],10); if (isNaN(h)) h = 0;
+    var m = parseInt(parts[1],10); if (isNaN(m)) m = 0;
+    var d = new Date(baseTs);
+    d.setHours(h, m, 0, 0);
+    return d.getTime();
+  }
+  /** Validates a plain "HH:MM" 24h string; returns the normalized string or null. */
+  function normalizeTimeStr(s){
+    var m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(s||'').trim());
+    if (!m) return null;
+    return pad(parseInt(m[1],10)) + ':' + m[2];
+  }
+  /** Auto-inserts ":" as the user types digits into a plain-text HH:MM field. */
+  function autoFormatTimeInput(e){
+    var el = e.target;
+    var digits = el.value.replace(/[^0-9]/g, '').slice(0, 4);
+    if (digits.length >= 3) {
+      el.value = digits.slice(0, 2) + ':' + digits.slice(2);
+    } else {
+      el.value = digits;
+    }
+  }
+  var DAILY_DEDUCT_MS = 3600000;
+  var MORNING_MIN_MS = 3600000;
+  var DAILY_CAP_MS = 4 * 3600000;
+  function ruleMsFromDoc(doc, field, fallbackMs){
+    var min = doc ? doc[field] : null;
+    return (typeof min === 'number' && min >= 0) ? min * 60000 : fallbackMs;
+  }
+  function computeOvertimeMs(clockIn, clockOut, workStart, workEnd, afterSchoolMs, rules){
+    afterSchoolMs = afterSchoolMs || 0;
+    rules = rules || {};
+    var morningMinMs = (typeof rules.morningMinMs === 'number') ? rules.morningMinMs : MORNING_MIN_MS;
+    var dailyDeductMs = (typeof rules.dailyDeductMs === 'number') ? rules.dailyDeductMs : DAILY_DEDUCT_MS;
+    var dailyCapMs = (typeof rules.dailyCapMs === 'number') ? rules.dailyCapMs : DAILY_CAP_MS;
+    var regStart = timeStrToTs(clockIn, workStart || '08:50');
+    var regEnd = timeStrToTs(clockIn, workEnd || '16:50');
+    if (regEnd <= regStart) regEnd += 24 * HOUR_MS;
+    var beforeMs = Math.max(0, Math.min(clockOut, regStart) - clockIn);
+    if (beforeMs < morningMinMs) beforeMs = 0;
+    var afterMs = Math.max(0, clockOut - Math.max(clockIn, regEnd));
+    var totalMs = Math.max(0, beforeMs + afterMs - afterSchoolMs);
+    var netMs = Math.max(0, totalMs - dailyDeductMs);
+    return Math.min(netMs, dailyCapMs);
+  }
+  function rulesFromDoc(doc){
+    return {
+      morningMinMs: ruleMsFromDoc(doc, 'morningMinMin', MORNING_MIN_MS),
+      dailyDeductMs: ruleMsFromDoc(doc, 'dailyDeductMin', DAILY_DEDUCT_MS),
+      dailyCapMs: ruleMsFromDoc(doc, 'dailyCapMin', DAILY_CAP_MS)
+    };
+  }
+  function overtimePhase(now, clockIn, workStart, workEnd){
+    var regStart = timeStrToTs(clockIn, workStart || '08:50');
+    var regEnd = timeStrToTs(clockIn, workEnd || '16:50');
+    if (now < regStart) return 'pre';
+    if (now > regEnd) return 'post';
+    return 'core';
+  }
+  function combineDateTime(dateStr, timeStr){
+    var dp = dateStr.split('-').map(Number);
+    var tp = timeStr.split(':').map(Number);
+    var d = new Date(dp[0], dp[1]-1, dp[2], tp[0]||0, tp[1]||0, 0, 0);
+    return d.getTime();
+  }
+  function fmtHM(ms){
+    var totalMin = Math.round(ms / 60000);
+    var h = Math.floor(totalMin / 60), m = totalMin % 60;
+    return h + '시간 ' + m + '분';
+  }
+  function floorHoursMs(ms){
+    return Math.floor(ms / HOUR_MS) * HOUR_MS;
+  }
+  function monthKey(ts){
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + pad(d.getMonth()+1);
+  }
+  function monthLabel(key){
+    var p = key.split('-');
+    return p[0] + '년 ' + parseInt(p[1], 10) + '월';
+  }
+
+  var els = {
+    hero: document.getElementById('hero'),
+    identityChip: document.getElementById('identityChip'),
+    chipDot: document.getElementById('chipDot'),
+    chipName: document.getElementById('chipName'),
+    switchIdBtn: document.getElementById('switchIdBtn'),
+    loginScreen: document.getElementById('loginScreen'),
+    nameInput: document.getElementById('nameInput'),
+    startBtn: document.getElementById('startBtn'),
+    recentHint: document.getElementById('recentHint'),
+    recentBtn: document.getElementById('recentBtn'),
+    mainApp: document.getElementById('mainApp'),
+    initError: document.getElementById('initError'),
+    initErrorMsg: document.getElementById('initErrorMsg'),
+    retryInitBtn: document.getElementById('retryInitBtn'),
+    myStatusDot: document.getElementById('myStatusDot'),
+    myName: document.getElementById('myName'),
+    myStateLabel: document.getElementById('myStateLabel'),
+    rateInput: document.getElementById('rateInput'),
+    workStartInput: document.getElementById('workStartInput'),
+    workEndInput: document.getElementById('workEndInput'),
+    ruleToggleBtn: document.getElementById('ruleToggleBtn'),
+    ruleForm: document.getElementById('ruleForm'),
+    morningMinInput: document.getElementById('morningMinInput'),
+    dailyDeductInput: document.getElementById('dailyDeductInput'),
+    dailyCapInput: document.getElementById('dailyCapInput'),
+    exportBtn: document.getElementById('exportBtn'),
+    timerClock: document.getElementById('timerClock'),
+    ringPhase: document.getElementById('ringPhase'),
+    ringProgress: document.getElementById('ringProgress'),
+    netHoursOut: document.getElementById('netHoursOut'),
+    estPayOut: document.getElementById('estPayOut'),
+    clockBtn: document.getElementById('clockBtn'),
+    teacherList: document.getElementById('teacherList'),
+    historyBody: document.getElementById('historyBody'),
+    historyFoot: document.getElementById('historyFoot'),
+    totalHours: document.getElementById('totalHours'),
+    totalRemain: document.getElementById('totalRemain'),
+    totalAmount: document.getElementById('totalAmount'),
+    manualAddBtn: document.getElementById('manualAddBtn'),
+    clockInEditRow: document.getElementById('clockInEditRow'),
+    clockInDisplay: document.getElementById('clockInDisplay'),
+    editClockInBtn: document.getElementById('editClockInBtn'),
+    clockInEditForm: document.getElementById('clockInEditForm'),
+    clockInEditInput: document.getElementById('clockInEditInput'),
+    clockInSaveBtn: document.getElementById('clockInSaveBtn'),
+    clockInCancelBtn: document.getElementById('clockInCancelBtn'),
+    manualForm: document.getElementById('manualForm'),
+    manualDate: document.getElementById('manualDate'),
+    manualIn: document.getElementById('manualIn'),
+    manualOut: document.getElementById('manualOut'),
+    manualSaveBtn: document.getElementById('manualSaveBtn'),
+    manualCancelBtn: document.getElementById('manualCancelBtn'),
+    manualError: document.getElementById('manualError'),
+    monthlyWrap: document.getElementById('monthlyWrap'),
+    boardPanel: document.getElementById('boardPanel'),
+    historyPanelNum: document.getElementById('historyPanelNum'),
+    monthlyPanelNum: document.getElementById('monthlyPanelNum'),
+  };
+
+  els.ringProgress.style.strokeDasharray = RING_C.toFixed(2);
+  els.ringProgress.style.strokeDashoffset = RING_C.toFixed(2);
+
+  var state = {
+    db: null,
+    isAdmin: false,
+    myId: null,
+    myName: null,
+    myDoc: null,
+    ready: false,
+    rateSaveTimer: null,
+    hoursSaveTimer: null,
+    ruleSaveTimer: null,
+    tickTimer: null,
+    teacherDocs: {},
+    sessions: [],
+  };
+
+  function readRecent(){
+    try {
+      var raw = localStorage.getItem('overtime.lastUser');
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (obj && obj.name) return obj;
+    } catch (e) {}
+    return null;
+  }
+  function writeRecent(name){
+    try { localStorage.setItem('overtime.lastUser', JSON.stringify({ name: name })); } catch (e) {}
+  }
+  function clearRecent(){
+    try { localStorage.removeItem('overtime.lastUser'); } catch (e) {}
+  }
+
+  function showLogin(){
+    els.mainApp.hidden = true;
+    els.identityChip.hidden = true;
+    els.loginScreen.hidden = false;
+    els.hero.classList.remove('compact');
+    var recent = readRecent();
+    if (recent && recent.name) {
+      els.recentHint.hidden = false;
+      els.recentBtn.textContent = recent.name;
+    } else {
+      els.recentHint.hidden = true;
+    }
+  }
+
+  function showMain(){
+    els.loginScreen.hidden = true;
+    els.mainApp.hidden = false;
+    els.identityChip.hidden = false;
+    els.chipName.textContent = state.myName;
+    els.hero.classList.add('compact');
+  }
+
+  function enterAs(name){
+    name = name.trim();
+    if (!name) return;
+    state.myId = nameToId(name);
+    state.myName = name;
+    state.isAdmin = ADMIN_NAMES.indexOf(state.myName) !== -1;
+    writeRecent(name);
+    showMain();
+    applyAdminUi();
+    startForUser();
+  }
+
+  els.startBtn.addEventListener('click', function(){ enterAs(els.nameInput.value); });
+  els.nameInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') enterAs(els.nameInput.value); });
+  els.recentBtn.addEventListener('click', function(){
+    var recent = readRecent();
+    if (recent) enterAs(recent.name);
+  });
+  els.switchIdBtn.addEventListener('click', function(){
+    stopTicking();
+    unsubscribeAll();
+    clearRecent();
+    state.myId = null; state.myName = null; state.myDoc = null; state.ready = false; state.isAdmin = false;
+    els.boardPanel.hidden = true;
+    showLogin();
+  });
+
+  function stopTicking(){
+    if (state.tickTimer) { clearInterval(state.tickTimer); state.tickTimer = null; }
+  }
+  function startTicking(){
+    stopTicking();
+    state.tickTimer = setInterval(renderMyTimer, 1000);
+  }
+
+  function renderMyTimer(){
+    var doc = state.myDoc;
+    var on = !!(doc && doc.clockInAt);
+    var clockIn = on ? doc.clockInAt : null;
+    var now = Date.now();
+    var workStart = (doc && doc.workStart) || '08:50';
+    var workEnd = (doc && doc.workEnd) || '16:50';
+    var rate = doc ? (Number(doc.hourlyRate) || 0) : 0;
+
+    var elapsed = on ? (now - clockIn) : 0;
+    var overtimeMs = on ? computeOvertimeMs(clockIn, now, workStart, workEnd, 0, rulesFromDoc(doc)) : 0;
+    var est = (overtimeMs / HOUR_MS) * rate;
+
+    els.timerClock.textContent = fmtClock(elapsed);
+    els.netHoursOut.textContent = fmtHM(overtimeMs);
+    els.estPayOut.textContent = fmtWon(est);
+
+    if (!on) {
+      els.ringProgress.style.strokeDashoffset = RING_C.toFixed(2);
+      els.ringProgress.classList.remove('done');
+      els.ringPhase.textContent = '대기중';
+      return;
+    }
+
+    var phase = overtimePhase(now, clockIn, workStart, workEnd);
+    if (phase === 'pre') {
+      var regStart = timeStrToTs(clockIn, workStart);
+      var span = Math.max(1, regStart - clockIn);
+      var frac = Math.min(1, (now - clockIn) / span);
+      els.ringProgress.style.strokeDashoffset = (RING_C * (1 - frac)).toFixed(2);
+      els.ringProgress.classList.remove('done');
+      els.ringPhase.textContent = '출근 전 초과근무';
+    } else if (phase === 'core') {
+      els.ringProgress.style.strokeDashoffset = RING_C.toFixed(2);
+      els.ringProgress.classList.remove('done');
+      els.ringPhase.textContent = '정규 근무시간';
+    } else {
+      els.ringProgress.style.strokeDashoffset = '0';
+      els.ringProgress.classList.add('done');
+      els.ringPhase.textContent = '퇴근 후 초과근무';
+    }
+  }
+
+  function renderMyCard(){
+    var doc = state.myDoc;
+    els.myName.textContent = state.myName;
+    var on = !!(doc && doc.clockInAt);
+    els.myStatusDot.classList.toggle('on', on);
+    els.chipDot.classList.toggle('on', on);
+    els.myStateLabel.textContent = state.ready ? (on ? '초과근무 중' : '대기중') : '불러오는 중…';
+    els.clockBtn.textContent = state.ready ? (on ? '퇴근' : '출근') : '불러오는 중…';
+    els.clockBtn.disabled = busy || !state.ready;
+    els.clockBtn.classList.toggle('stop', on);
+    if (document.activeElement !== els.rateInput) {
+      els.rateInput.value = doc ? (doc.hourlyRate || 0) : 0;
+    }
+    if (document.activeElement !== els.workStartInput) {
+      els.workStartInput.value = doc ? (doc.workStart || '08:50') : '08:50';
+    }
+    if (document.activeElement !== els.workEndInput) {
+      els.workEndInput.value = doc ? (doc.workEnd || '16:50') : '16:50';
+    }
+    if (document.activeElement !== els.morningMinInput) {
+      els.morningMinInput.value = ruleMsFromDoc(doc, 'morningMinMin', MORNING_MIN_MS) / 60000;
+    }
+    if (document.activeElement !== els.dailyDeductInput) {
+      els.dailyDeductInput.value = ruleMsFromDoc(doc, 'dailyDeductMin', DAILY_DEDUCT_MS) / 60000;
+    }
+    if (document.activeElement !== els.dailyCapInput) {
+      els.dailyCapInput.value = ruleMsFromDoc(doc, 'dailyCapMin', DAILY_CAP_MS) / 60000;
+    }
+    els.manualAddBtn.disabled = !state.ready;
+    els.clockInEditRow.hidden = !on;
+    if (!on) {
+      els.clockInEditForm.hidden = true;
+    } else if (document.activeElement !== els.clockInEditInput) {
+      els.clockInDisplay.textContent = fmtTime(doc.clockInAt);
+    }
+    renderMyTimer();
+    renderMonthly(state.sessions);
+  }
+
+  function renderBoard(){
+    var ids = Object.keys(state.teacherDocs);
+    if (!ids.length) {
+      els.teacherList.innerHTML = '<div class="empty-row">등록된 사람이 없습니다</div>';
+      return;
+    }
+    ids.sort(function(a,b){
+      var da = state.teacherDocs[a], db_ = state.teacherDocs[b];
+      var oa = da.clockInAt ? 0 : 1, ob = db_.clockInAt ? 0 : 1;
+      if (oa !== ob) return oa - ob;
+      return (da.name||'').localeCompare(db_.name||'', 'ko');
+    });
+    var html = '';
+    for (var i=0;i<ids.length;i++){
+      var id = ids[i], d = state.teacherDocs[id];
+      var on = !!d.clockInAt;
+      var isMe = id === state.myId;
+      var stateText = on ? '근무 중 · ' + fmtClock(Date.now() - d.clockInAt) : '대기중';
+      html += '<div class="teacher-row' + (isMe?' me':'') + '">' +
+        '<span class="dot' + (on?' on':'') + '"></span>' +
+        '<span class="t-name">' + escapeHtml(d.name || '(이름 없음)') + (isMe ? '<span class="me-tag">나</span>' : '') + '</span>' +
+        '<span class="t-state' + (on?' on':'') + ' mono">' + stateText + '</span>' +
+        (state.isAdmin ? '<button type="button" class="del-btn board-del-btn" data-tid="' + escapeHtml(id) + '">삭제</button>' : '') +
+        '</div>';
+    }
+    els.teacherList.innerHTML = html;
+  }
+
+  els.teacherList.addEventListener('click', function(e){
+    var btn = e.target.closest ? e.target.closest('.board-del-btn') : null;
+    if (!btn || !state.db || !state.isAdmin) return;
+    var tid = btn.getAttribute('data-tid');
+    if (!tid) return;
+
+    if (btn.getAttribute('data-confirm') !== '1') {
+      clearTimeout(btn._confirmTimer);
+      btn.setAttribute('data-confirm', '1');
+      btn.classList.add('confirm');
+      btn.textContent = '정말 삭제?';
+      btn._confirmTimer = setTimeout(function(){
+        btn.removeAttribute('data-confirm');
+        btn.classList.remove('confirm');
+        btn.textContent = '삭제';
+      }, 4000);
+      return;
+    }
+
+    clearTimeout(btn._confirmTimer);
+    btn.disabled = true;
+    state.db.doc('teachers/' + tid).delete().catch(function(err){
+      console.error('delete teacher failed', err);
+      showInitError('보드 항목 삭제에 실패했습니다: ' + describeErr(err));
+      btn.disabled = false;
+      btn.removeAttribute('data-confirm');
+      btn.classList.remove('confirm');
+      btn.textContent = '삭제';
+    });
+  });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  function renderMonthly(sessions){
+    if (!sessions.length) {
+      els.monthlyWrap.innerHTML = '<div class="empty-row">아직 기록이 없습니다</div>';
+      return;
+    }
+    var byMonth = {};
+    sessions.forEach(function(s){
+      var key = monthKey(s.clockIn);
+      byMonth[key] = (byMonth[key] || 0) + (s.hours ? s.hours * HOUR_MS : 0);
+    });
+    var keys = Object.keys(byMonth).sort().reverse();
+    var rate = state.myDoc ? (Number(state.myDoc.hourlyRate) || 0) : 0;
+    var html = '';
+    keys.forEach(function(key){
+      var rawMs = byMonth[key];
+      var payMs = floorHoursMs(rawMs);
+      var amount = (payMs / HOUR_MS) * rate;
+      var remainderMs = rawMs - payMs;
+      var shortMs = remainderMs > 0 ? (HOUR_MS - remainderMs) : 0;
+      html += '<div class="monthly-row">' +
+        '<span class="m-label">' + monthLabel(key) + '</span>' +
+        '<span class="m-detail">' +
+          '<span class="m-line">근무 합계 <b>' + fmtHM(rawMs) + '</b></span>' +
+          '<span class="m-line">급여 산정 <b>' + (payMs / HOUR_MS) + '시간</b></span>' +
+          (shortMs > 0 ? '<span class="m-short">다음 시간까지 ' + Math.ceil(shortMs / 60000) + '분 남음</span>' : '') +
+        '</span>' +
+        '<span class="m-amount">' + fmtWon(amount) + '</span>' +
+        '</div>';
+    });
+    els.monthlyWrap.innerHTML = html;
+  }
+
+  function renderHistory(sessions){
+    state.sessions = sessions;
+    els.exportBtn.disabled = !sessions.length;
+    renderMonthly(sessions);
+    if (!sessions.length) {
+      els.historyBody.innerHTML = '<div class="history-empty">아직 기록이 없습니다</div>';
+      els.historyFoot.hidden = true;
+      return;
+    }
+    var html = '', totalNet = 0, totalAmt = 0;
+    for (var i=0;i<sessions.length;i++){
+      var s = sessions[i];
+      totalNet += s.hours ? s.hours * HOUR_MS : 0;
+      totalAmt += s.amount || 0;
+      var afterSchoolMin = Math.round((s.afterSchoolMs || 0) / 60000);
+      html += '<div class="hrow"><div class="hrow-line">' +
+        '<span class="hc hc-date td-summary" data-label="">' + (s.manual ? '<span class="manual-tag">직접</span>' : '') + fmtDate(s.clockIn) + '</span>' +
+        '<span class="hc hc-in mono td-detail" data-label="출근">' + (s.id ? '<input type="text" inputmode="numeric" maxlength="5" class="timeedit-input" data-id="' + escapeHtml(s.id) + '" data-field="in" value="' + fmtTime(s.clockIn) + '">' : fmtTime(s.clockIn)) + '</span>' +
+        '<span class="hc hc-out mono td-detail" data-label="퇴근">' + (s.id ? '<input type="text" inputmode="numeric" maxlength="5" class="timeedit-input" data-id="' + escapeHtml(s.id) + '" data-field="out" value="' + fmtTime(s.clockOut) + '">' : fmtTime(s.clockOut)) + '</span>' +
+        '<span class="hc hc-after num td-detail" data-label="방과후 차감">' + (s.id ?
+          '<span class="afterschool-wrap"><input type="number" class="afterschool-input" min="0" step="5" data-id="' + escapeHtml(s.id) + '" value="' + afterSchoolMin + '"><span>분</span></span>' :
+          (afterSchoolMin + '분')) + '</span>' +
+        '<span class="hc hc-hours num mono td-summary" data-label="">' + fmtHM((s.hours||0) * HOUR_MS) + '<span class="row-caret" aria-hidden="true">▾▾</span></span>' +
+        '<span class="hc hc-amount num amount mono td-detail" data-label="금액">' + fmtWon(s.amount) + '</span>' +
+        '<span class="hc hc-del td-detail" data-label="">' + (s.id ? '<button type="button" class="del-btn" data-id="' + escapeHtml(s.id) + '">삭제</button>' : '') + '</span>' +
+        '</div></div>';
+    }
+    els.historyBody.innerHTML = html;
+    els.historyFoot.hidden = false;
+    els.totalHours.textContent = fmtHM(totalNet);
+    var totalPayMs = floorHoursMs(totalNet);
+    var totalShortMs = totalNet - totalPayMs > 0 ? (HOUR_MS - (totalNet - totalPayMs)) : 0;
+    els.totalRemain.textContent = totalShortMs > 0 ? ('다음 시간까지 ' + Math.ceil(totalShortMs / 60000) + '분') : '';
+    els.totalAmount.textContent = fmtWon(totalAmt);
+  }
+
+  els.historyBody.addEventListener('click', function(e){
+    var summaryCell = e.target.closest ? e.target.closest('.td-summary') : null;
+    if (!summaryCell) return;
+    var row = summaryCell.closest('.hrow');
+    if (!row) return;
+    row.classList.toggle('expanded');
+  });
+
+  els.historyBody.addEventListener('click', function(e){
+    var btn = e.target.closest ? e.target.closest('.del-btn') : null;
+    if (!btn || !state.db) return;
+    var id = btn.getAttribute('data-id');
+    if (!id) return;
+
+    if (btn.getAttribute('data-confirm') !== '1') {
+      clearTimeout(btn._confirmTimer);
+      btn.setAttribute('data-confirm', '1');
+      btn.classList.add('confirm');
+      btn.textContent = '정말 삭제?';
+      btn._confirmTimer = setTimeout(function(){
+        btn.removeAttribute('data-confirm');
+        btn.classList.remove('confirm');
+        btn.textContent = '삭제';
+      }, 4000);
+      return;
+    }
+
+    clearTimeout(btn._confirmTimer);
+    btn.disabled = true;
+    state.db.doc('sessions/' + id).delete().catch(function(err){
+      console.error('delete session failed', err);
+      showInitError('기록 삭제에 실패했습니다: ' + describeErr(err));
+      btn.disabled = false;
+      btn.removeAttribute('data-confirm');
+      btn.classList.remove('confirm');
+      btn.textContent = '삭제';
+    });
+  });
+
+  els.historyBody.addEventListener('change', function(e){
+    var input = e.target.closest ? e.target.closest('.afterschool-input') : null;
+    if (!input || !state.db) return;
+    var id = input.getAttribute('data-id');
+    if (!id) return;
+    var s = null;
+    for (var i = 0; i < state.sessions.length; i++) {
+      if (state.sessions[i].id === id) { s = state.sessions[i]; break; }
+    }
+    if (!s) return;
+
+    var min = Math.max(0, Math.round(Number(input.value) || 0));
+    input.value = min;
+    var afterSchoolMs = min * 60000;
+    var workStart = s.workStart || '08:50';
+    var workEnd = s.workEnd || '16:50';
+    var overtimeMs = computeOvertimeMs(s.clockIn, s.clockOut, workStart, workEnd, afterSchoolMs, rulesFromDoc(s));
+    var hours = overtimeMs / HOUR_MS;
+    var rate = (typeof s.rate === 'number') ? s.rate : (s.hours ? (s.amount || 0) / s.hours : (state.myDoc ? Number(state.myDoc.hourlyRate) || 0 : 0));
+    var amount = hours * rate;
+
+    input.disabled = true;
+    state.db.doc('sessions/' + id).update({
+      afterSchoolMs: afterSchoolMs,
+      hours: hours,
+      amount: amount,
+      rate: rate,
+      updatedAt: Date.now()
+    }).catch(function(err){
+      console.error('afterschool save failed', err);
+      showInitError('방과후 차감시간 저장에 실패했습니다: ' + describeErr(err));
+    }).finally(function(){
+      input.disabled = false;
+    });
+  });
+
+  els.historyBody.addEventListener('input', function(e){
+    var input = e.target.closest ? e.target.closest('.timeedit-input') : null;
+    if (!input) return;
+    autoFormatTimeInput(e);
+  });
+
+  els.historyBody.addEventListener('change', function(e){
+    var input = e.target.closest ? e.target.closest('.timeedit-input') : null;
+    if (!input || !state.db) return;
+    var id = input.getAttribute('data-id');
+    var field = input.getAttribute('data-field');
+    if (!id || !field) return;
+    var s = null;
+    for (var i = 0; i < state.sessions.length; i++) {
+      if (state.sessions[i].id === id) { s = state.sessions[i]; break; }
+    }
+    if (!s) return;
+
+    var timeStr = normalizeTimeStr(input.value);
+    if (!timeStr) {
+      showInitError('시간은 HH:MM 형식으로 입력해주세요 (예: 07:55).');
+      input.value = fmtTime(field === 'in' ? s.clockIn : s.clockOut);
+      return;
+    }
+
+    var newClockIn = s.clockIn, newClockOut = s.clockOut;
+    if (field === 'in') {
+      var candidateIn = timeStrToTs(s.clockIn, timeStr);
+      if (candidateIn >= s.clockOut) {
+        showInitError('출근 시간은 퇴근 시간보다 빨라야 합니다.');
+        input.value = fmtTime(s.clockIn);
+        return;
+      }
+      newClockIn = candidateIn;
+    } else {
+      var candidateOut = timeStrToTs(s.clockOut, timeStr);
+      if (candidateOut <= s.clockIn) candidateOut += 24 * HOUR_MS;
+      newClockOut = candidateOut;
+    }
+
+    var workStart = s.workStart || '08:50';
+    var workEnd = s.workEnd || '16:50';
+    var afterSchoolMs = s.afterSchoolMs || 0;
+    var overtimeMs = computeOvertimeMs(newClockIn, newClockOut, workStart, workEnd, afterSchoolMs, rulesFromDoc(s));
+    var hours = overtimeMs / HOUR_MS;
+    var rate = (typeof s.rate === 'number') ? s.rate : (s.hours ? (s.amount || 0) / s.hours : (state.myDoc ? Number(state.myDoc.hourlyRate) || 0 : 0));
+    var amount = hours * rate;
+
+    input.disabled = true;
+    state.db.doc('sessions/' + id).update({
+      clockIn: newClockIn,
+      clockOut: newClockOut,
+      hours: hours,
+      amount: amount,
+      rate: rate,
+      updatedAt: Date.now()
+    }).catch(function(err){
+      console.error('time edit save failed', err);
+      showInitError('시간 수정 저장에 실패했습니다: ' + describeErr(err));
+      input.value = fmtTime(field === 'in' ? s.clockIn : s.clockOut);
+    }).finally(function(){
+      input.disabled = false;
+    });
+  });
+
+  var busy = false;
+  els.clockBtn.addEventListener('click', function(){
+    if (busy || !state.db || !state.myId || !state.ready) return;
+    var doc = state.myDoc;
+    var ref = state.db.doc('teachers/' + state.myId);
+    busy = true;
+    els.clockBtn.disabled = true;
+    if (doc && doc.clockInAt) {
+      var clockIn = doc.clockInAt;
+      var clockOut = Date.now();
+      var workStart = doc.workStart || '08:50';
+      var workEnd = doc.workEnd || '16:50';
+      var rules = rulesFromDoc(doc);
+      var overtimeMs = computeOvertimeMs(clockIn, clockOut, workStart, workEnd, 0, rules);
+      var hours = overtimeMs / HOUR_MS;
+      var rate = Number(doc.hourlyRate) || 0;
+      var amount = hours * rate;
+      var sessionsCol = state.db.collection('sessions');
+      sessionsCol.add({
+        teacherId: state.myId,
+        teacherName: state.myName,
+        clockIn: clockIn,
+        clockOut: clockOut,
+        workStart: workStart,
+        workEnd: workEnd,
+        morningMinMin: Math.round(rules.morningMinMs / 60000),
+        dailyDeductMin: Math.round(rules.dailyDeductMs / 60000),
+        dailyCapMin: Math.round(rules.dailyCapMs / 60000),
+        afterSchoolMs: 0,
+        rate: rate,
+        hours: hours,
+        amount: amount,
+        createdAt: Date.now()
+      }).then(function(){
+        return ref.update({ clockInAt: null, updatedAt: Date.now() });
+      }).catch(function(err){
+        console.error('clock-out failed', err);
+        showInitError('퇴근 기록 저장에 실패했습니다: ' + describeErr(err));
+      }).finally(function(){
+        busy = false; els.clockBtn.disabled = !state.ready;
+      });
+    } else {
+      ref.update({ clockInAt: Date.now(), updatedAt: Date.now() }).catch(function(err){
+        console.error('clock-in failed', err);
+        showInitError('출근 기록 저장에 실패했습니다: ' + describeErr(err));
+      }).finally(function(){
+        busy = false; els.clockBtn.disabled = !state.ready;
+      });
+    }
+  });
+
+  els.rateInput.addEventListener('input', function(){
+    if (!state.db || !state.myId) return;
+    clearTimeout(state.rateSaveTimer);
+    var val = Math.max(0, Number(els.rateInput.value) || 0);
+    state.rateSaveTimer = setTimeout(function(){
+      state.db.doc('teachers/' + state.myId).update({ hourlyRate: val, updatedAt: Date.now() }).catch(function(err){
+        console.error('rate save failed', err);
+      });
+    }, 500);
+  });
+
+  function scheduleWorkHoursSave(){
+    if (!state.db || !state.myId) return;
+    clearTimeout(state.hoursSaveTimer);
+    var ws = normalizeTimeStr(els.workStartInput.value) || '08:50';
+    var we = normalizeTimeStr(els.workEndInput.value) || '16:50';
+    state.hoursSaveTimer = setTimeout(function(){
+      state.db.doc('teachers/' + state.myId).update({ workStart: ws, workEnd: we, updatedAt: Date.now() }).catch(function(err){
+        console.error('work hours save failed', err);
+      });
+    }, 500);
+  }
+  els.workStartInput.addEventListener('input', autoFormatTimeInput);
+  els.workEndInput.addEventListener('input', autoFormatTimeInput);
+  els.workStartInput.addEventListener('change', scheduleWorkHoursSave);
+  els.workEndInput.addEventListener('change', scheduleWorkHoursSave);
+
+  els.ruleToggleBtn.addEventListener('click', function(){
+    els.ruleForm.hidden = !els.ruleForm.hidden;
+  });
+
+  function scheduleRuleSave(){
+    if (!state.db || !state.myId) return;
+    clearTimeout(state.ruleSaveTimer);
+    var morningMin = Math.max(0, Math.round(Number(els.morningMinInput.value)));
+    var deductMin = Math.max(0, Math.round(Number(els.dailyDeductInput.value)));
+    var capMin = Math.max(0, Math.round(Number(els.dailyCapInput.value)));
+    if (isNaN(morningMin)) morningMin = MORNING_MIN_MS / 60000;
+    if (isNaN(deductMin)) deductMin = DAILY_DEDUCT_MS / 60000;
+    if (isNaN(capMin)) capMin = DAILY_CAP_MS / 60000;
+    state.ruleSaveTimer = setTimeout(function(){
+      state.db.doc('teachers/' + state.myId).update({
+        morningMinMin: morningMin,
+        dailyDeductMin: deductMin,
+        dailyCapMin: capMin,
+        updatedAt: Date.now()
+      }).catch(function(err){
+        console.error('rule save failed', err);
+      });
+    }, 500);
+  }
+  els.morningMinInput.addEventListener('input', scheduleRuleSave);
+  els.dailyDeductInput.addEventListener('input', scheduleRuleSave);
+  els.dailyCapInput.addEventListener('input', scheduleRuleSave);
+
+  var exportBusy = false;
+  els.exportBtn.addEventListener('click', function(){
+    if (exportBusy || !state.sessions.length) return;
+    if (typeof XLSX === 'undefined') {
+      showInitError('엑셀 내보내기 기능을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
+      return;
+    }
+    exportBusy = true;
+    els.exportBtn.disabled = true;
+    var rows = [['이름','날짜','출근시간','퇴근시간','방과후 차감(분)','초과근무 시간(시간)','시간당 금액(원)','금액(원)']];
+    state.sessions.slice().reverse().forEach(function(s){
+      rows.push([
+        state.myName,
+        fmtDate(s.clockIn),
+        fmtDateTime(s.clockIn),
+        fmtDateTime(s.clockOut),
+        Math.round((s.afterSchoolMs||0) / 60000),
+        Number((s.hours||0).toFixed(2)),
+        Math.round((s.amount||0) / Math.max(0.0001, s.hours||1)),
+        Math.round(s.amount||0)
+      ]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:10},{wch:8},{wch:14},{wch:14},{wch:14},{wch:16},{wch:14},{wch:12}];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '근무기록');
+    var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    var blob = new Blob([wbout], { type: 'application/octet-stream' });
+    var filename = state.myName + '_초과근무기록.xlsx';
+
+    try {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+    } catch (err) {
+      console.error('export failed', err);
+      showInitError('엑셀 저장에 실패했습니다: ' + describeErr(err));
+    }
+    exportBusy = false;
+    els.exportBtn.disabled = !state.sessions.length;
+  });
+
+  function showManualError(msg){
+    els.manualError.textContent = msg;
+    els.manualError.hidden = false;
+  }
+  function hideManualError(){
+    els.manualError.hidden = true;
+  }
+
+  els.manualAddBtn.addEventListener('click', function(){
+    if (els.manualAddBtn.disabled) return;
+    var willShow = els.manualForm.hidden;
+    els.manualForm.hidden = !willShow;
+    if (willShow) {
+      hideManualError();
+      if (!els.manualDate.value) {
+        var d = new Date();
+        els.manualDate.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+      }
+    }
+  });
+  els.manualCancelBtn.addEventListener('click', function(){
+    els.manualForm.hidden = true;
+    hideManualError();
+  });
+
+  els.manualIn.addEventListener('input', autoFormatTimeInput);
+  els.manualOut.addEventListener('input', autoFormatTimeInput);
+
+  var manualBusy = false;
+  els.manualSaveBtn.addEventListener('click', function(){
+    if (manualBusy || !state.db || !state.myId || !state.ready) return;
+    hideManualError();
+    var dateStr = els.manualDate.value;
+    var inStr = normalizeTimeStr(els.manualIn.value);
+    var outStr = normalizeTimeStr(els.manualOut.value);
+    if (!dateStr || !inStr || !outStr) {
+      showManualError('날짜와 출근·퇴근 시간을 HH:MM 형식으로 입력해주세요 (예: 07:55).');
+      return;
+    }
+    var clockIn = combineDateTime(dateStr, inStr);
+    var clockOut = combineDateTime(dateStr, outStr);
+    if (clockOut <= clockIn) clockOut += 24 * HOUR_MS;
+    var doc = state.myDoc || {};
+    var workStart = doc.workStart || '08:50';
+    var workEnd = doc.workEnd || '16:50';
+    var rules = rulesFromDoc(doc);
+    var overtimeMs = computeOvertimeMs(clockIn, clockOut, workStart, workEnd, 0, rules);
+    var hours = overtimeMs / HOUR_MS;
+    var rate = Number(doc.hourlyRate) || 0;
+    var amount = hours * rate;
+
+    manualBusy = true;
+    els.manualSaveBtn.disabled = true;
+    state.db.collection('sessions').add({
+      teacherId: state.myId,
+      teacherName: state.myName,
+      clockIn: clockIn,
+      clockOut: clockOut,
+      workStart: workStart,
+      workEnd: workEnd,
+      morningMinMin: Math.round(rules.morningMinMs / 60000),
+      dailyDeductMin: Math.round(rules.dailyDeductMs / 60000),
+      dailyCapMin: Math.round(rules.dailyCapMs / 60000),
+      afterSchoolMs: 0,
+      rate: rate,
+      hours: hours,
+      amount: amount,
+      manual: true,
+      createdAt: Date.now()
+    }).then(function(){
+      els.manualForm.hidden = true;
+      els.manualIn.value = '';
+      els.manualOut.value = '';
+    }).catch(function(err){
+      console.error('manual entry save failed', err);
+      showManualError('저장에 실패했습니다: ' + describeErr(err));
+    }).finally(function(){
+      manualBusy = false;
+      els.manualSaveBtn.disabled = false;
+    });
+  });
+
+  els.clockInEditInput.addEventListener('input', autoFormatTimeInput);
+  els.editClockInBtn.addEventListener('click', function(){
+    var doc = state.myDoc;
+    if (!doc || !doc.clockInAt) return;
+    var d = new Date(doc.clockInAt);
+    els.clockInEditInput.value = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    els.clockInEditForm.hidden = false;
+  });
+  els.clockInCancelBtn.addEventListener('click', function(){
+    els.clockInEditForm.hidden = true;
+  });
+
+  var clockInEditBusy = false;
+  els.clockInSaveBtn.addEventListener('click', function(){
+    if (clockInEditBusy || !state.db || !state.myId) return;
+    var doc = state.myDoc;
+    if (!doc || !doc.clockInAt) return;
+    var timeStr = normalizeTimeStr(els.clockInEditInput.value);
+    if (!timeStr) {
+      showInitError('출근 시간을 HH:MM 형식으로 입력해주세요 (예: 07:55).');
+      return;
+    }
+    var newClockIn = timeStrToTs(doc.clockInAt, timeStr);
+    if (newClockIn > Date.now()) newClockIn = Date.now();
+
+    clockInEditBusy = true;
+    els.clockInSaveBtn.disabled = true;
+    state.db.doc('teachers/' + state.myId).update({ clockInAt: newClockIn, updatedAt: Date.now() }).then(function(){
+      els.clockInEditForm.hidden = true;
+    }).catch(function(err){
+      console.error('clock-in edit failed', err);
+      showInitError('출근 시간 수정에 실패했습니다: ' + describeErr(err));
+    }).finally(function(){
+      clockInEditBusy = false;
+      els.clockInSaveBtn.disabled = false;
+    });
+  });
+
+  var unsubMy = null, unsubTeachers = null, unsubSessions = null;
+  function unsubscribeAll(){
+    if (unsubMy) { unsubMy(); unsubMy = null; }
+    if (unsubTeachers) { unsubTeachers(); unsubTeachers = null; }
+    if (unsubSessions) { unsubSessions(); unsubSessions = null; }
+  }
+
+  function showInitError(msg){
+    if (msg) els.initErrorMsg.textContent = msg;
+    els.initError.hidden = false;
+  }
+  function hideInitError(){
+    els.initError.hidden = true;
+  }
+  function describeErr(err){
+    if (err && err.message) return err.message;
+    if (err && err.code) return err.code;
+    return '알 수 없는 오류';
+  }
+
+  els.retryInitBtn.addEventListener('click', function(){
+    if (state.myId) startForUser();
+  });
+
+  function startForUser(){
+    state.ready = false;
+    renderMyCard();
+    hideInitError();
+    if (!state.db) {
+      showInitError('이 화면에서는 데이터를 저장할 수 없습니다. Claude 웹/앱에서 이 아티팩트를 열었는지 확인해주세요.');
+      return;
+    }
+    var ref = state.db.doc('teachers/' + state.myId);
+    var settled = false;
+    var watchdog = setTimeout(function(){
+      if (!settled) {
+        showInitError('연결이 지연되고 있습니다. 이 아티팩트에 대한 데이터 접근 권한을 허용했는지 확인 후 다시 시도해주세요.');
+      }
+    }, 15000);
+    ref.get().then(function(snap){
+      if (!snap.exists) {
+        return ref.set({
+          name: state.myName, hourlyRate: 0, workStart: '08:50', workEnd: '16:50',
+          morningMinMin: MORNING_MIN_MS / 60000, dailyDeductMin: DAILY_DEDUCT_MS / 60000, dailyCapMin: DAILY_CAP_MS / 60000,
+          clockInAt: null, updatedAt: Date.now()
+        });
+      } else if (snap.data().name !== state.myName) {
+        return ref.update({ name: state.myName, updatedAt: Date.now() });
+      }
+    }).then(function(){
+      settled = true; clearTimeout(watchdog);
+      state.ready = true;
+      hideInitError();
+      renderMyCard();
+      unsubMy = ref.onSnapshot(function(snap){
+        state.myDoc = snap.exists ? snap.data() : { name: state.myName, hourlyRate: 0, clockInAt: null };
+        renderMyCard();
+      }, function(err){ console.error('my doc subscribe error', err); showInitError('실시간 동기화가 끊어졌습니다: ' + describeErr(err)); });
+
+      unsubTeachers = state.db.collection('teachers').onSnapshot(function(qs){
+        var map = {};
+        qs.docs.forEach(function(d){ map[d.id] = d.data(); });
+        state.teacherDocs = map;
+        renderBoard();
+      }, function(err){ console.error('teachers subscribe error', err); });
+
+      unsubSessions = state.db.collection('sessions')
+        .where('teacherId', '==', state.myId)
+        .orderBy('clockIn', 'desc')
+        .limit(200)
+        .onSnapshot(function(qs){
+          var rows = qs.docs.map(function(d){
+            var data = {};
+            var src = d.data() || {};
+            for (var k in src) { if (Object.prototype.hasOwnProperty.call(src, k)) data[k] = src[k]; }
+            data.id = d.id;
+            return data;
+          });
+          renderHistory(rows);
+        }, function(err){ console.error('sessions subscribe error', err); });
+    }).catch(function(err){
+      settled = true; clearTimeout(watchdog);
+      console.error('init teacher doc failed', err);
+      showInitError('근무 기록을 불러오지 못했습니다: ' + describeErr(err));
+    });
+    startTicking();
+  }
+
+  function applyAdminUi(){
+    els.boardPanel.hidden = !state.isAdmin;
+    if (state.isAdmin) {
+      els.historyPanelNum.textContent = '02';
+      els.monthlyPanelNum.textContent = '03';
+    } else {
+      els.historyPanelNum.textContent = '01';
+      els.monthlyPanelNum.textContent = '02';
+    }
+    renderBoard();
+  }
+
+  function boot(){
+    state.db = makeBackend();
+    var recent = readRecent();
+    if (recent && recent.name) {
+      state.myName = recent.name;
+      state.myId = nameToId(recent.name);
+      state.isAdmin = ADMIN_NAMES.indexOf(state.myName) !== -1;
+      showMain();
+      applyAdminUi();
+      startForUser();
+    } else {
+      showLogin();
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
