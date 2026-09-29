@@ -698,6 +698,20 @@
     });
   }
 
+  // Apps Script/Sheets can hand back a purely-numeric value as a string
+  // (e.g. a timestamp in a text-formatted cell). Coerce anything that looks
+  // like a plain number back into a real Number so Date math never sees a
+  // string and silently produces NaN. Leaves real text ("08:50", names) alone.
+  function coerceNumericFields(obj){
+    if (!obj) return obj;
+    var out = {};
+    for (var k in obj) {
+      var v = obj[k];
+      out[k] = (typeof v === 'string' && v !== '' && /^-?\d+(\.\d+)?$/.test(v)) ? Number(v) : v;
+    }
+    return out;
+  }
+
   function backendDocRef(path){
     var parts = path.split('/');
     var col = parts[0], id = parts[1];
@@ -708,7 +722,7 @@
     var deleteAction = isTeacher ? 'deleteTeacher' : 'deleteSession';
     function fetchSnap(){
       return apiGet({ action: getAction, id: id }).then(function(res){
-        var data = res.data || null;
+        var data = res.data ? coerceNumericFields(res.data) : null;
         return { id: id, exists: !!data, data: function(){ return data; } };
       });
     }
@@ -760,7 +774,7 @@
           var req = isTeachers ? apiGet({ action: 'listTeachers' }) : apiGet({ action: 'listSessions', teacherId: teacherIdFilter });
           req.then(function(res){
             if (stopped) return;
-            var rows = res.data || [];
+            var rows = (res.data || []).map(coerceNumericFields);
             var docs = rows.map(function(r){ return { id: r.id, data: function(){ return r; } }; });
             next({ docs: docs });
           }).catch(function(err){ if (!stopped && errCb) errCb(err); });
