@@ -750,6 +750,24 @@
     return out;
   }
 
+  // Apps Script's own dispatch/Sheets-read overhead has a floor of roughly
+  // 1-3s per request no matter how few requests we make - it's not something
+  // further request-merging can remove. What we CAN do is stop making the
+  // user stare at "불러오는 중" for that whole stretch on every visit: show
+  // whatever we last successfully loaded immediately (read-only - the
+  // 출근/퇴근 button stays disabled until the live fetch actually confirms
+  // the current state), then swap in the fresh data once it arrives.
+  function bootstrapCacheKey(teacherId){ return 'overtime.bootstrapCache.' + teacherId; }
+  function readBootstrapCache(teacherId){
+    try {
+      var raw = localStorage.getItem(bootstrapCacheKey(teacherId));
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function writeBootstrapCache(teacherId, data){
+    try { localStorage.setItem(bootstrapCacheKey(teacherId), JSON.stringify(data)); } catch (e) {}
+  }
+
   function backendDocRef(path){
     var parts = path.split('/');
     var col = parts[0], id = parts[1];
@@ -1804,6 +1822,19 @@
     // listTeachers + listSessions), each its own Apps Script execution and
     // network round-trip - that's most of what made "불러오는 중" feel slow.
     // `bootstrap` folds all three into a single request/response.
+    if (!attempt) {
+      var cached = readBootstrapCache(state.myId);
+      if (cached) {
+        state.myDoc = cached.teacher ? coerceNumericFields(cached.teacher) : state.myDoc;
+        renderMyCard();
+        var cachedMap = {};
+        (cached.teachers || []).forEach(function(r){ var row = coerceNumericFields(r); cachedMap[row.id] = row; });
+        state.teacherDocs = cachedMap;
+        renderBoard();
+        renderHistory((cached.sessions || []).map(coerceNumericFields));
+      }
+    }
+
     function loadInitial(){
       attempt++;
       apiGet({ action: 'bootstrap', id: state.myId }).then(function(res){
@@ -1818,6 +1849,7 @@
           : (me.name !== state.myName ? ref.update({ name: state.myName, updatedAt: Date.now() }) : Promise.resolve());
         return ensure.then(function(){ return data; });
       }).then(function(data){
+        writeBootstrapCache(state.myId, data);
         state.ready = true;
         hideInitError();
         state.myDoc = data.teacher ? coerceNumericFields(data.teacher) : { name: state.myName, hourlyRate: 0, clockInAt: null };
