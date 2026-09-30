@@ -262,6 +262,10 @@
   }
   .ring-time{ font-size:17px; font-weight:600; }
   .ring-phase{ font-size:10.5px; color:var(--muted); font-weight:700; max-width:80px; line-height:1.3; }
+  .ring-split{ display:flex; flex-direction:column; gap:7px; align-items:center; }
+  .ring-split-row{ display:flex; flex-direction:column; align-items:center; gap:1px; }
+  .ring-split-label{ font-size:8.5px; color:var(--muted); font-weight:700; letter-spacing:-.1px; }
+  .ring-split-value{ font-size:14px; font-weight:700; }
 
   .timer-info{ display:flex; flex-direction:column; gap:10px; min-width:0; }
   .stat-grid{ display:flex; gap:10px; }
@@ -542,8 +546,16 @@
             <circle class="ring-progress" id="ringProgress" cx="50" cy="50" r="42"></circle>
           </svg>
           <div class="ring-center">
-            <div class="ring-time mono" id="timerClock">00:00:00</div>
-            <div class="ring-phase" id="ringPhase">대기중</div>
+            <div class="ring-split">
+              <div class="ring-split-row">
+                <span class="ring-split-label">오전초과근무 시간</span>
+                <span class="ring-split-value mono" id="ringMorning">00:00</span>
+              </div>
+              <div class="ring-split-row">
+                <span class="ring-split-label">오후초과근무 시간</span>
+                <span class="ring-split-value mono" id="ringAfternoon">00:00</span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="timer-info">
@@ -886,6 +898,26 @@
     var h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
     return pad(h)+':'+pad(m)+':'+pad(sec);
   }
+  function fmtClockHM(ms){
+    if (ms < 0) ms = 0;
+    var m = Math.floor(ms/60000);
+    var h = Math.floor(m/60);
+    return pad(h)+':'+pad(m%60);
+  }
+  // Raw morning/after-hours overtime so far, live and unrounded - unlike
+  // computeOvertimeMs this doesn't apply the morning-minimum threshold or
+  // the daily deduction/cap, since those are payroll rules for the final
+  // total (shown in the 초과근무 시간 tile), not something the running ring
+  // display should silently zero out mid-shift.
+  function splitOvertimeMs(clockIn, now, workStart, workEnd){
+    var regStart = timeStrToTs(clockIn, workStart || '08:50');
+    var regEnd = timeStrToTs(clockIn, workEnd || '16:50');
+    if (regEnd <= regStart) regEnd += 24 * HOUR_MS;
+    return {
+      morningMs: Math.max(0, Math.min(now, regStart) - clockIn),
+      afternoonMs: Math.max(0, now - Math.max(clockIn, regEnd))
+    };
+  }
   function fmtHoursNum(ms){ return (ms / HOUR_MS).toFixed(2); }
   function fmtWon(n){
     n = Math.round(n || 0);
@@ -1015,8 +1047,8 @@
     dailyDeductInput: document.getElementById('dailyDeductInput'),
     dailyCapInput: document.getElementById('dailyCapInput'),
     exportBtn: document.getElementById('exportBtn'),
-    timerClock: document.getElementById('timerClock'),
-    ringPhase: document.getElementById('ringPhase'),
+    ringMorning: document.getElementById('ringMorning'),
+    ringAfternoon: document.getElementById('ringAfternoon'),
     ringProgress: document.getElementById('ringProgress'),
     netHoursOut: document.getElementById('netHoursOut'),
     estPayOut: document.getElementById('estPayOut'),
@@ -1148,7 +1180,6 @@
     var workEnd = (doc && doc.workEnd) || '16:50';
     var rate = doc ? (Number(doc.hourlyRate) || 0) : 0;
 
-    var elapsed = on ? (now - clockIn) : 0;
     var overtimeMs = on ? computeOvertimeMs(clockIn, now, workStart, workEnd, 0, rulesFromDoc(doc)) : 0;
     var est = (overtimeMs / HOUR_MS) * rate;
 
@@ -1156,34 +1187,30 @@
     els.estPayOut.textContent = fmtWon(est);
 
     if (!on) {
-      els.timerClock.textContent = fmtClock(0);
+      els.ringMorning.textContent = fmtClockHM(0);
+      els.ringAfternoon.textContent = fmtClockHM(0);
       els.ringProgress.style.strokeDashoffset = RING_C.toFixed(2);
       els.ringProgress.classList.remove('done');
-      els.ringPhase.textContent = '대기중';
       return;
     }
 
+    var split = splitOvertimeMs(clockIn, now, workStart, workEnd);
+    els.ringMorning.textContent = fmtClockHM(split.morningMs);
+    els.ringAfternoon.textContent = fmtClockHM(split.afternoonMs);
+
     var phase = overtimePhase(now, clockIn, workStart, workEnd);
     if (phase === 'pre') {
-      els.timerClock.textContent = fmtClock(elapsed);
       var regStart = timeStrToTs(clockIn, workStart);
       var span = Math.max(1, regStart - clockIn);
       var frac = Math.min(1, (now - clockIn) / span);
       els.ringProgress.style.strokeDashoffset = (RING_C * (1 - frac)).toFixed(2);
       els.ringProgress.classList.remove('done');
-      els.ringPhase.textContent = '출근 전 초과근무';
     } else if (phase === 'core') {
-      // Overtime isn't accruing during regular hours - freeze the clock
-      // instead of letting it keep ticking, which read as "still counting".
-      els.timerClock.textContent = '--:--:--';
       els.ringProgress.style.strokeDashoffset = RING_C.toFixed(2);
       els.ringProgress.classList.remove('done');
-      els.ringPhase.textContent = '정규 근무시간';
     } else {
-      els.timerClock.textContent = fmtClock(elapsed);
       els.ringProgress.style.strokeDashoffset = '0';
       els.ringProgress.classList.add('done');
-      els.ringPhase.textContent = '퇴근 후 초과근무';
     }
   }
 
