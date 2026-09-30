@@ -753,9 +753,21 @@
       },
       onSnapshot: function(next, errCb){
         var stopped = false;
+        var failStreak = 0;
         function poll(){
           if (stopped) return;
-          fetchSnap().then(function(snap){ if (!stopped) next(snap); }).catch(function(err){ if (!stopped && errCb) errCb(err); });
+          fetchSnap().then(function(snap){
+            if (stopped) return;
+            failStreak = 0;
+            next(snap);
+          }).catch(function(err){
+            if (stopped) return;
+            failStreak++;
+            console.warn('poll failed (' + failStreak + ')', err);
+            // A single Apps Script hiccup self-heals on the next tick; only
+            // bother the user once it's clearly not recovering on its own.
+            if (failStreak >= 3 && errCb) errCb(err);
+          });
         }
         poll();
         var iv = setInterval(poll, 4000);
@@ -778,16 +790,23 @@
       limit: function(){ return ref; },
       onSnapshot: function(next, errCb){
         var stopped = false;
+        var failStreak = 0;
         var isTeachers = (name === 'teachers');
         function poll(){
           if (stopped) return;
           var req = isTeachers ? apiGet({ action: 'listTeachers' }) : apiGet({ action: 'listSessions', teacherId: teacherIdFilter });
           req.then(function(res){
             if (stopped) return;
+            failStreak = 0;
             var rows = (res.data || []).map(coerceNumericFields);
             var docs = rows.map(function(r){ return { id: r.id, data: function(){ return r; } }; });
             next({ docs: docs });
-          }).catch(function(err){ if (!stopped && errCb) errCb(err); });
+          }).catch(function(err){
+            if (stopped) return;
+            failStreak++;
+            console.warn('poll failed (' + failStreak + ')', err);
+            if (failStreak >= 3 && errCb) errCb(err);
+          });
         }
         poll();
         var iv = setInterval(poll, isTeachers ? 5000 : 8000);
@@ -1074,11 +1093,11 @@
     var overtimeMs = on ? computeOvertimeMs(clockIn, now, workStart, workEnd, 0, rulesFromDoc(doc)) : 0;
     var est = (overtimeMs / HOUR_MS) * rate;
 
-    els.timerClock.textContent = fmtClock(elapsed);
     els.netHoursOut.textContent = fmtHM(overtimeMs);
     els.estPayOut.textContent = fmtWon(est);
 
     if (!on) {
+      els.timerClock.textContent = fmtClock(0);
       els.ringProgress.style.strokeDashoffset = RING_C.toFixed(2);
       els.ringProgress.classList.remove('done');
       els.ringPhase.textContent = '대기중';
@@ -1087,6 +1106,7 @@
 
     var phase = overtimePhase(now, clockIn, workStart, workEnd);
     if (phase === 'pre') {
+      els.timerClock.textContent = fmtClock(elapsed);
       var regStart = timeStrToTs(clockIn, workStart);
       var span = Math.max(1, regStart - clockIn);
       var frac = Math.min(1, (now - clockIn) / span);
@@ -1094,10 +1114,14 @@
       els.ringProgress.classList.remove('done');
       els.ringPhase.textContent = '출근 전 초과근무';
     } else if (phase === 'core') {
+      // Overtime isn't accruing during regular hours - freeze the clock
+      // instead of letting it keep ticking, which read as "still counting".
+      els.timerClock.textContent = '--:--:--';
       els.ringProgress.style.strokeDashoffset = RING_C.toFixed(2);
       els.ringProgress.classList.remove('done');
       els.ringPhase.textContent = '정규 근무시간';
     } else {
+      els.timerClock.textContent = fmtClock(elapsed);
       els.ringProgress.style.strokeDashoffset = '0';
       els.ringProgress.classList.add('done');
       els.ringPhase.textContent = '퇴근 후 초과근무';
@@ -1554,7 +1578,7 @@
     XLSX.utils.book_append_sheet(wb, ws, '근무기록');
     var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     var blob = new Blob([wbout], { type: 'application/octet-stream' });
-    var filename = state.myName + '_초과근무기록.xlsx';
+    var filename = (new Date().getMonth() + 1) + '월 초과근무기록부.xlsx';
 
     try {
       var url = URL.createObjectURL(blob);
