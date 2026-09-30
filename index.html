@@ -1799,22 +1799,37 @@
     // every run eventually succeeds), so instead of surfacing a scary error
     // banner on the first failure, keep retrying quietly in the background
     // with a capped backoff until it lands.
+    //
+    // The initial load used to be 3 separate requests (getTeacher, then
+    // listTeachers + listSessions), each its own Apps Script execution and
+    // network round-trip - that's most of what made "불러오는 중" feel slow.
+    // `bootstrap` folds all three into a single request/response.
     function loadInitial(){
       attempt++;
-      ref.get().then(function(snap){
-        if (!snap.exists) {
-          return ref.set({
-            name: state.myName, hourlyRate: 0, workStart: '08:50', workEnd: '16:50',
-            morningMinMin: MORNING_MIN_MS / 60000, dailyDeductMin: DAILY_DEDUCT_MS / 60000, dailyCapMin: DAILY_CAP_MS / 60000,
-            clockInAt: null, updatedAt: Date.now()
-          });
-        } else if (snap.data().name !== state.myName) {
-          return ref.update({ name: state.myName, updatedAt: Date.now() });
-        }
-      }).then(function(){
+      apiGet({ action: 'bootstrap', id: state.myId }).then(function(res){
+        var data = res.data || {};
+        var me = data.teacher ? coerceNumericFields(data.teacher) : null;
+        var ensure = !me
+          ? ref.set({
+              name: state.myName, hourlyRate: 0, workStart: '08:50', workEnd: '16:50',
+              morningMinMin: MORNING_MIN_MS / 60000, dailyDeductMin: DAILY_DEDUCT_MS / 60000, dailyCapMin: DAILY_CAP_MS / 60000,
+              clockInAt: null, updatedAt: Date.now()
+            })
+          : (me.name !== state.myName ? ref.update({ name: state.myName, updatedAt: Date.now() }) : Promise.resolve());
+        return ensure.then(function(){ return data; });
+      }).then(function(data){
         state.ready = true;
         hideInitError();
+        state.myDoc = data.teacher ? coerceNumericFields(data.teacher) : { name: state.myName, hourlyRate: 0, clockInAt: null };
         renderMyCard();
+
+        var map = {};
+        (data.teachers || []).forEach(function(r){ var row = coerceNumericFields(r); map[row.id] = row; });
+        state.teacherDocs = map;
+        renderBoard();
+
+        renderHistory((data.sessions || []).map(coerceNumericFields));
+
         unsubMy = ref.onSnapshot(function(snap){
           state.myDoc = snap.exists ? snap.data() : { name: state.myName, hourlyRate: 0, clockInAt: null };
           hideInitError();
@@ -1822,9 +1837,9 @@
         }, function(err){ console.warn('my doc subscribe error, retrying quietly', err); });
 
         unsubTeachers = state.db.collection('teachers').onSnapshot(function(qs){
-          var map = {};
-          qs.docs.forEach(function(d){ map[d.id] = d.data(); });
-          state.teacherDocs = map;
+          var map2 = {};
+          qs.docs.forEach(function(d){ map2[d.id] = d.data(); });
+          state.teacherDocs = map2;
           renderBoard();
         }, function(err){ console.error('teachers subscribe error', err); });
 
@@ -1834,11 +1849,11 @@
           .limit(200)
           .onSnapshot(function(qs){
             var rows = qs.docs.map(function(d){
-              var data = {};
+              var rdata = {};
               var src = d.data() || {};
-              for (var k in src) { if (Object.prototype.hasOwnProperty.call(src, k)) data[k] = src[k]; }
-              data.id = d.id;
-              return data;
+              for (var k in src) { if (Object.prototype.hasOwnProperty.call(src, k)) rdata[k] = src[k]; }
+              rdata.id = d.id;
+              return rdata;
             });
             renderHistory(rows);
           }, function(err){ console.error('sessions subscribe error', err); });
