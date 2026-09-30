@@ -674,21 +674,43 @@
 
   function sleep(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
 
-  function apiGetOnce(params){
-    var qs = Object.keys(params).map(function(k){
-      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]);
-    }).join('&');
-    return fetch(BACKEND_URL + '?' + qs).then(function(r){
-      if (!r.ok) throw { code: 'unavailable', message: 'HTTP ' + r.status };
-      return r.json();
-    }).then(function(res){
-      if (!res || res.ok === false) throw { code: 'invalid_argument', message: (res && res.error) || 'request failed' };
-      return res;
+  // GETs go through JSONP (a <script src> tag), not fetch(). Apps Script's
+  // web app response is served via a redirect to a content host, and that
+  // hop occasionally fails to come back through fetch()'s CORS path even
+  // though the script itself ran fine (confirmed in the Executions log -
+  // every run shows 완료됨). A <script> tag isn't subject to CORS at all,
+  // so this sidesteps that failure mode entirely instead of just retrying it.
+  var jsonpCounter = 0;
+  function jsonpGetOnce(params){
+    return new Promise(function(resolve, reject){
+      var cbName = '__ot_cb_' + (jsonpCounter++) + '_' + Date.now();
+      var script = document.createElement('script');
+      var timeoutId;
+      function cleanup(){
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        clearTimeout(timeoutId);
+      }
+      window[cbName] = function(res){
+        cleanup();
+        if (!res || res.ok === false) {
+          reject({ code: 'invalid_argument', message: (res && res.error) || 'request failed' });
+        } else {
+          resolve(res);
+        }
+      };
+      var qs = Object.keys(params).map(function(k){
+        return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]);
+      }).join('&');
+      script.src = BACKEND_URL + '?' + qs + '&callback=' + cbName;
+      script.onerror = function(){ cleanup(); reject({ code: 'unavailable', message: 'script load failed' }); };
+      timeoutId = setTimeout(function(){ cleanup(); reject({ code: 'unavailable', message: 'timeout' }); }, 12000);
+      document.head.appendChild(script);
     });
   }
-  // Apps Script occasionally answers a plain GET with a transient 404/network
-  // hiccup (its redirect-to-content step racing under load). Reads are safe
-  // to retry, so absorb a couple of flaky attempts before surfacing an error.
+  function apiGetOnce(params){ return jsonpGetOnce(params); }
+  // Even JSONP can hit a one-off network blip, so still absorb a couple of
+  // failed attempts before surfacing anything to the user.
   function apiGet(params){
     return apiGetOnce(params)
       .catch(function(){ return sleep(600).then(function(){ return apiGetOnce(params); }); })
