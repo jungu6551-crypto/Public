@@ -751,12 +751,18 @@
   }
 
   // Apps Script's own dispatch/Sheets-read overhead has a floor of roughly
-  // 1-3s per request no matter how few requests we make - it's not something
-  // further request-merging can remove. What we CAN do is stop making the
-  // user stare at "불러오는 중" for that whole stretch on every visit: show
-  // whatever we last successfully loaded immediately (read-only - the
-  // 출근/퇴근 button stays disabled until the live fetch actually confirms
-  // the current state), then swap in the fresh data once it arrives.
+  // 1-3s per request (sometimes much more) no matter how few requests we
+  // make - not something further request-merging can remove. For the actual
+  // "walk in, tap the icon, tap 출근" flow, waiting on a live server round
+  // trip before the button even responds isn't usable. So: any cache we have
+  // is trusted immediately and unlocks the button right away; the real fetch
+  // still runs in the background and corrects the screen within a couple
+  // seconds if anything had drifted (e.g. clocked in from another device
+  // since). No time-based expiry here - overnight/weekend gaps between uses
+  // (16:50 one day to 07:50 the next, or over a weekend) routinely exceed
+  // any reasonable "freshness" window anyway, and this is a single teacher's
+  // own device, so a week-old cache isn't meaningfully riskier than an
+  // hour-old one.
   function bootstrapCacheKey(teacherId){ return 'overtime.bootstrapCache.' + teacherId; }
   function readBootstrapCache(teacherId){
     try {
@@ -765,7 +771,11 @@
     } catch (e) { return null; }
   }
   function writeBootstrapCache(teacherId, data){
-    try { localStorage.setItem(bootstrapCacheKey(teacherId), JSON.stringify(data)); } catch (e) {}
+    try {
+      var payload = {}; for (var k in data) payload[k] = data[k];
+      payload.savedAt = Date.now();
+      localStorage.setItem(bootstrapCacheKey(teacherId), JSON.stringify(payload));
+    } catch (e) {}
   }
 
   function backendDocRef(path){
@@ -1826,6 +1836,11 @@
       var cached = readBootstrapCache(state.myId);
       if (cached) {
         state.myDoc = cached.teacher ? coerceNumericFields(cached.teacher) : state.myDoc;
+        // Trust the cache enough to unlock the 출근/퇴근 button right away -
+        // a walk-in-and-tap flow can't wait on a live round trip. The real
+        // fetch below still runs and will correct this within seconds if
+        // something changed from another device in the meantime.
+        state.ready = true;
         renderMyCard();
         var cachedMap = {};
         (cached.teachers || []).forEach(function(r){ var row = coerceNumericFields(r); cachedMap[row.id] = row; });
