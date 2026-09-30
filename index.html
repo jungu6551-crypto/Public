@@ -688,11 +688,11 @@
   }
   // Apps Script occasionally answers a plain GET with a transient 404/network
   // hiccup (its redirect-to-content step racing under load). Reads are safe
-  // to retry, so absorb one flaky attempt before surfacing it as an error.
+  // to retry, so absorb a couple of flaky attempts before surfacing an error.
   function apiGet(params){
-    return apiGetOnce(params).catch(function(err){
-      return sleep(700).then(function(){ return apiGetOnce(params); });
-    });
+    return apiGetOnce(params)
+      .catch(function(){ return sleep(600).then(function(){ return apiGetOnce(params); }); })
+      .catch(function(){ return sleep(1200).then(function(){ return apiGetOnce(params); }); });
   }
   function apiPost(body){
     return fetch(BACKEND_URL, {
@@ -755,7 +755,7 @@
         var stopped = false;
         var failStreak = 0;
         function poll(){
-          if (stopped) return;
+          if (stopped || document.hidden) return;
           fetchSnap().then(function(snap){
             if (stopped) return;
             failStreak = 0;
@@ -766,11 +766,14 @@
             console.warn('poll failed (' + failStreak + ')', err);
             // A single Apps Script hiccup self-heals on the next tick; only
             // bother the user once it's clearly not recovering on its own.
-            if (failStreak >= 3 && errCb) errCb(err);
+            if (failStreak >= 5 && errCb) errCb(err);
           });
         }
         poll();
-        var iv = setInterval(poll, 4000);
+        // Pausing while the tab is hidden cuts our Apps Script execution-time
+        // usage a lot - that daily quota is the most likely reason a busy
+        // test day starts producing persistent (not just occasional) failures.
+        var iv = setInterval(poll, 10000);
         return function(){ stopped = true; clearInterval(iv); };
       }
     };
@@ -793,7 +796,7 @@
         var failStreak = 0;
         var isTeachers = (name === 'teachers');
         function poll(){
-          if (stopped) return;
+          if (stopped || document.hidden) return;
           var req = isTeachers ? apiGet({ action: 'listTeachers' }) : apiGet({ action: 'listSessions', teacherId: teacherIdFilter });
           req.then(function(res){
             if (stopped) return;
@@ -805,11 +808,11 @@
             if (stopped) return;
             failStreak++;
             console.warn('poll failed (' + failStreak + ')', err);
-            if (failStreak >= 3 && errCb) errCb(err);
+            if (failStreak >= 5 && errCb) errCb(err);
           });
         }
         poll();
-        var iv = setInterval(poll, isTeachers ? 5000 : 8000);
+        var iv = setInterval(poll, isTeachers ? 12000 : 15000);
         return function(){ stopped = true; clearInterval(iv); };
       }
     };
