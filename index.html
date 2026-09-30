@@ -1488,6 +1488,14 @@
       var hours = overtimeMs / HOUR_MS;
       var rate = Number(doc.hourlyRate) || 0;
       var amount = hours * rate;
+      // A 0 rate almost never means "unpaid on purpose" here - it means the
+      // hourly-rate autosave hasn't reached the server yet (that save fails
+      // silently, so nothing else would have warned about it). Surface it now
+      // instead of quietly recording a 0원 row the teacher won't notice until
+      // payday.
+      if (hours > 0 && rate <= 0) {
+        showInitError('시간당 금액이 0원으로 저장되어 있어 이번 근무의 수당이 0원으로 기록됩니다. "시간당 금액"을 다시 확인해주세요.');
+      }
       var sessionsCol = state.db.collection('sessions');
       sessionsCol.add({
         teacherId: state.myId,
@@ -1531,8 +1539,16 @@
     clearTimeout(state.rateSaveTimer);
     var val = Math.max(0, Number(els.rateInput.value) || 0);
     state.rateSaveTimer = setTimeout(function(){
-      state.db.doc('teachers/' + state.myId).update({ hourlyRate: val, updatedAt: Date.now() }).catch(function(err){
+      var ref = state.db.doc('teachers/' + state.myId);
+      ref.update({ hourlyRate: val, updatedAt: Date.now() }).catch(function(){
+        // One quiet retry before bothering the user - a lone Apps Script
+        // hiccup here otherwise leaves the server-side rate stuck at its old
+        // value (possibly 0) with no visible sign anything went wrong, which
+        // is exactly what silently zeroed out a real overtime payout before.
+        return ref.update({ hourlyRate: val, updatedAt: Date.now() });
+      }).catch(function(err){
         console.error('rate save failed', err);
+        showInitError('시간당 금액 저장에 실패했습니다. 다시 입력해주세요: ' + describeErr(err));
       });
     }, 500);
   });
