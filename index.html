@@ -425,6 +425,14 @@
   .del-btn.confirm{ color:#fff; background:var(--stop); }
   .del-btn.confirm:hover{ color:#fff; background:var(--stop); filter:brightness(1.08); }
 
+  .monthly-nav{ display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:10px; }
+  .month-nav-btn{
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--surface);
+    color:var(--ink); font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .month-nav-btn:disabled{ opacity:.35; cursor:default; }
+  .month-nav-btn:not(:disabled):hover{ background:var(--surface-2); }
+  .month-nav-label{ font-weight:700; font-size:15px; min-width:104px; text-align:center; }
   .monthly-wrap{ display:flex; flex-direction:column; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; background:var(--surface); box-shadow:var(--shadow); }
   .monthly-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
   .monthly-row:last-child{ border-bottom:none; }
@@ -515,14 +523,10 @@
           <label for="dailyDeductInput">하루 공제(분)</label>
           <input id="dailyDeductInput" type="number" min="0" step="5" />
         </div>
-        <div class="rule-field">
-          <label for="dailyCapInput">하루 최대 인정(분)</label>
-          <input id="dailyCapInput" type="number" min="0" step="5" />
-        </div>
-        <span class="rule-hint">학교 규정에 맞게 조정하세요 (기본값 60 / 60 / 240분)</span>
+        <span class="rule-hint">학교 규정에 맞게 조정하세요 (기본값 60 / 60분)</span>
       </div>
 
-      <span class="hours-hint standalone">출근 전 근무는 위 '최소 인정' 시간 미만이면 인정 안 되고, 인정된 시간 합계에서 '하루 공제' 시간만큼 뺀 뒤 '하루 최대 인정' 시간까지만 계산돼요</span>
+      <span class="hours-hint standalone">출근 전 근무는 위 '최소 인정' 시간 미만이면 인정 안 되고, 인정된 시간 합계에서 '하루 공제' 시간만큼 빼서 계산돼요. (2026-09-30까지의 기록은 하루 4시간까지만 인정된 예전 규정이 적용돼요)</span>
 
       <div class="clockin-edit-row" id="clockInEditRow" hidden>
         <span>오늘 출근 시간 <b id="clockInDisplay">-</b></span>
@@ -600,6 +604,12 @@
         </div>
       </div>
 
+      <div class="monthly-nav">
+        <button id="historyMonthPrevBtn" class="month-nav-btn" type="button" aria-label="이전 달">◀</button>
+        <span class="month-nav-label" id="historyMonthNavLabel">-</span>
+        <button id="historyMonthNextBtn" class="month-nav-btn" type="button" aria-label="다음 달">▶</button>
+      </div>
+
       <div id="manualForm" class="manual-form" hidden>
         <div class="manual-field">
           <label for="manualDate">날짜</label>
@@ -654,8 +664,13 @@
         <span class="panel-num" id="monthlyPanelNum">03</span>
         <div class="panel-head-text">
           <h2>월별 정산</h2>
-          <p class="panel-sub">하루 최대 4시간까지 산정되며, 월 합계는 분 단위를 절사해 정수 시간으로 지급돼요</p>
+          <p class="panel-sub">2026-10-01부터 하루 최대 인정 한도 없이 전부 산정되며(그 전은 하루 4시간까지), 월 합계는 분 단위를 절사해 정수 시간으로 지급돼요</p>
         </div>
+      </div>
+      <div class="monthly-nav">
+        <button id="monthPrevBtn" class="month-nav-btn" type="button" aria-label="이전 달">◀</button>
+        <span class="month-nav-label" id="monthNavLabel">-</span>
+        <button id="monthNextBtn" class="month-nav-btn" type="button" aria-label="다음 달">▶</button>
       </div>
       <div class="monthly-wrap" id="monthlyWrap">
         <div class="empty-row">아직 기록이 없습니다</div>
@@ -963,6 +978,12 @@
   var DAILY_DEDUCT_MS = 3600000;
   var MORNING_MIN_MS = 3600000;
   var DAILY_CAP_MS = 4 * 3600000;
+  // The daily cap is dropped starting 2026-10-01 (school policy change) -
+  // overtime worked that day counts in full, minus only the 1시간 daily
+  // deduction. The morning-minimum-1시간 rule (morningMinMs) is unaffected.
+  // Sessions dated before the cutoff keep the old capped behavior, so past
+  // records stay consistent with how they were actually paid.
+  var CAP_REMOVED_FROM = new Date(2026, 9, 1, 0, 0, 0, 0).getTime();
   function ruleMsFromDoc(doc, field, fallbackMs){
     var min = doc ? doc[field] : null;
     return (typeof min === 'number' && min >= 0) ? min * 60000 : fallbackMs;
@@ -981,6 +1002,7 @@
     var afterMs = Math.max(0, clockOut - Math.max(clockIn, regEnd));
     var totalMs = Math.max(0, beforeMs + afterMs - afterSchoolMs);
     var netMs = Math.max(0, totalMs - dailyDeductMs);
+    if (clockIn >= CAP_REMOVED_FROM) return netMs;
     return Math.min(netMs, dailyCapMs);
   }
   function rulesFromDoc(doc){
@@ -1019,6 +1041,11 @@
     var p = key.split('-');
     return p[0] + '년 ' + parseInt(p[1], 10) + '월';
   }
+  function monthKeyAdd(key, delta){
+    var p = key.split('-');
+    var d = new Date(Number(p[0]), Number(p[1]) - 1 + delta, 1);
+    return monthKey(d.getTime());
+  }
 
   var els = {
     hero: document.getElementById('hero'),
@@ -1045,7 +1072,6 @@
     ruleForm: document.getElementById('ruleForm'),
     morningMinInput: document.getElementById('morningMinInput'),
     dailyDeductInput: document.getElementById('dailyDeductInput'),
-    dailyCapInput: document.getElementById('dailyCapInput'),
     exportBtn: document.getElementById('exportBtn'),
     ringMorning: document.getElementById('ringMorning'),
     ringAfternoon: document.getElementById('ringAfternoon'),
@@ -1075,6 +1101,12 @@
     manualCancelBtn: document.getElementById('manualCancelBtn'),
     manualError: document.getElementById('manualError'),
     monthlyWrap: document.getElementById('monthlyWrap'),
+    monthPrevBtn: document.getElementById('monthPrevBtn'),
+    monthNextBtn: document.getElementById('monthNextBtn'),
+    monthNavLabel: document.getElementById('monthNavLabel'),
+    historyMonthPrevBtn: document.getElementById('historyMonthPrevBtn'),
+    historyMonthNextBtn: document.getElementById('historyMonthNextBtn'),
+    historyMonthNavLabel: document.getElementById('historyMonthNavLabel'),
     boardPanel: document.getElementById('boardPanel'),
     historyPanelNum: document.getElementById('historyPanelNum'),
     monthlyPanelNum: document.getElementById('monthlyPanelNum'),
@@ -1159,6 +1191,7 @@
     unsubscribeAll();
     clearRecent();
     state.myId = null; state.myName = null; state.myDoc = null; state.ready = false; state.isAdmin = false;
+    state.monthlyViewKey = null;
     els.boardPanel.hidden = true;
     showLogin();
   });
@@ -1239,9 +1272,6 @@
     if (document.activeElement !== els.dailyDeductInput) {
       els.dailyDeductInput.value = ruleMsFromDoc(doc, 'dailyDeductMin', DAILY_DEDUCT_MS) / 60000;
     }
-    if (document.activeElement !== els.dailyCapInput) {
-      els.dailyCapInput.value = ruleMsFromDoc(doc, 'dailyCapMin', DAILY_CAP_MS) / 60000;
-    }
     els.manualAddBtn.disabled = !state.ready;
     els.clockInEditRow.hidden = !on;
     if (!on) {
@@ -1250,7 +1280,7 @@
       els.clockInDisplay.textContent = fmtTime(doc.clockInAt);
     }
     renderMyTimer();
-    renderMonthly(state.sessions);
+    syncMonthNav();
   }
 
   function renderBoard(){
@@ -1318,44 +1348,41 @@
     });
   }
 
-  function renderMonthly(sessions){
-    if (!sessions.length) {
-      els.monthlyWrap.innerHTML = '<div class="empty-row">아직 기록이 없습니다</div>';
-      return;
-    }
-    var byMonth = {};
-    sessions.forEach(function(s){
-      var key = monthKey(s.clockIn);
-      byMonth[key] = (byMonth[key] || 0) + (s.hours ? s.hours * HOUR_MS : 0);
-    });
-    var keys = Object.keys(byMonth).sort().reverse();
-    var rate = state.myDoc ? (Number(state.myDoc.hourlyRate) || 0) : 0;
-    var html = '';
-    keys.forEach(function(key){
-      var rawMs = byMonth[key];
-      var payMs = floorHoursMs(rawMs);
-      var amount = (payMs / HOUR_MS) * rate;
-      var remainderMs = rawMs - payMs;
-      var shortMs = remainderMs > 0 ? (HOUR_MS - remainderMs) : 0;
-      html += '<div class="monthly-row">' +
-        '<span class="m-label">' + monthLabel(key) + '</span>' +
-        '<span class="m-detail">' +
-          '<span class="m-line">근무 합계 <b>' + fmtHM(rawMs) + '</b></span>' +
-          '<span class="m-line">급여 산정 <b>' + fmtHM(payMs) + '</b></span>' +
-          (shortMs > 0 ? '<span class="m-short">다음 시간까지 ' + Math.ceil(shortMs / 60000) + '분 남음</span>' : '') +
-        '</span>' +
-        '<span class="m-amount">' + fmtWon(amount) + '</span>' +
-        '</div>';
-    });
-    els.monthlyWrap.innerHTML = html;
+  function filterSessionsByMonth(sessions, key){
+    return sessions.filter(function(s){ return monthKey(s.clockIn) === key; });
   }
 
-  function renderHistory(sessions){
-    state.sessions = sessions;
-    els.exportBtn.disabled = !sessions.length;
-    renderMonthly(sessions);
+  function renderMonthly(sessions, key){
+    var byMonth = {};
+    sessions.forEach(function(s){
+      var k = monthKey(s.clockIn);
+      byMonth[k] = (byMonth[k] || 0) + (s.hours ? s.hours * HOUR_MS : 0);
+    });
+
+    var rawMs = byMonth[key] || 0;
+    if (!rawMs) {
+      els.monthlyWrap.innerHTML = '<div class="empty-row">이 달의 기록이 없습니다</div>';
+      return;
+    }
+
+    var rate = state.myDoc ? (Number(state.myDoc.hourlyRate) || 0) : 0;
+    var payMs = floorHoursMs(rawMs);
+    var amount = (payMs / HOUR_MS) * rate;
+    var remainderMs = rawMs - payMs;
+    var shortMs = remainderMs > 0 ? (HOUR_MS - remainderMs) : 0;
+    els.monthlyWrap.innerHTML = '<div class="monthly-row">' +
+      '<span class="m-detail">' +
+        '<span class="m-line">근무 합계 <b>' + fmtHM(rawMs) + '</b></span>' +
+        '<span class="m-line">급여 산정 <b>' + fmtHM(payMs) + '</b></span>' +
+        (shortMs > 0 ? '<span class="m-short">다음 시간까지 ' + Math.ceil(shortMs / 60000) + '분 남음</span>' : '') +
+      '</span>' +
+      '<span class="m-amount">' + fmtWon(amount) + '</span>' +
+      '</div>';
+  }
+
+  function renderHistoryList(sessions){
     if (!sessions.length) {
-      els.historyBody.innerHTML = '<div class="history-empty">아직 기록이 없습니다</div>';
+      els.historyBody.innerHTML = '<div class="history-empty">이 달의 기록이 없습니다</div>';
       els.historyFoot.hidden = true;
       return;
     }
@@ -1384,6 +1411,39 @@
     var totalShortMs = totalNet - totalPayMs > 0 ? (HOUR_MS - (totalNet - totalPayMs)) : 0;
     els.totalRemain.textContent = totalShortMs > 0 ? ('다음 시간까지 ' + Math.ceil(totalShortMs / 60000) + '분') : '';
     els.totalAmount.textContent = fmtWon(totalAmt);
+  }
+
+  function syncMonthNav(){
+    var curKey = monthKey(Date.now());
+    if (!state.monthlyViewKey) state.monthlyViewKey = curKey;
+    var key = state.monthlyViewKey;
+    var label = monthLabel(key);
+    var atLatest = key >= curKey;
+
+    els.monthNavLabel.textContent = label;
+    els.monthNextBtn.disabled = atLatest;
+    els.historyMonthNavLabel.textContent = label;
+    els.historyMonthNextBtn.disabled = atLatest;
+
+    renderMonthly(state.sessions, key);
+    renderHistoryList(filterSessionsByMonth(state.sessions, key));
+  }
+  function goToMonth(delta){
+    var cur = state.monthlyViewKey || monthKey(Date.now());
+    var next = monthKeyAdd(cur, delta);
+    if (delta > 0 && next > monthKey(Date.now())) return;
+    state.monthlyViewKey = next;
+    syncMonthNav();
+  }
+  els.monthPrevBtn.addEventListener('click', function(){ goToMonth(-1); });
+  els.monthNextBtn.addEventListener('click', function(){ goToMonth(1); });
+  els.historyMonthPrevBtn.addEventListener('click', function(){ goToMonth(-1); });
+  els.historyMonthNextBtn.addEventListener('click', function(){ goToMonth(1); });
+
+  function renderHistory(sessions){
+    state.sessions = sessions;
+    els.exportBtn.disabled = !sessions.length;
+    syncMonthNav();
   }
 
   els.historyBody.addEventListener('click', function(e){
@@ -1633,15 +1693,12 @@
     clearTimeout(state.ruleSaveTimer);
     var morningMin = Math.max(0, Math.round(Number(els.morningMinInput.value)));
     var deductMin = Math.max(0, Math.round(Number(els.dailyDeductInput.value)));
-    var capMin = Math.max(0, Math.round(Number(els.dailyCapInput.value)));
     if (isNaN(morningMin)) morningMin = MORNING_MIN_MS / 60000;
     if (isNaN(deductMin)) deductMin = DAILY_DEDUCT_MS / 60000;
-    if (isNaN(capMin)) capMin = DAILY_CAP_MS / 60000;
     state.ruleSaveTimer = setTimeout(function(){
       state.db.doc('teachers/' + state.myId).update({
         morningMinMin: morningMin,
         dailyDeductMin: deductMin,
-        dailyCapMin: capMin,
         updatedAt: Date.now()
       }).catch(function(err){
         console.error('rule save failed', err);
@@ -1650,7 +1707,6 @@
   }
   els.morningMinInput.addEventListener('input', scheduleRuleSave);
   els.dailyDeductInput.addEventListener('input', scheduleRuleSave);
-  els.dailyCapInput.addEventListener('input', scheduleRuleSave);
 
   var exportBusy = false;
   els.exportBtn.addEventListener('click', function(){
