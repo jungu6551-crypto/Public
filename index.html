@@ -7,6 +7,12 @@
 <style>
   *{ box-sizing:border-box; }
   html, body{ margin:0; padding:0; }
+  /* Several elements below (login screen, rule form, main app) also carry a
+     class or inline style that sets `display`, which otherwise overrides the
+     browser's default `[hidden]{display:none}` rule since author CSS always
+     wins over the UA stylesheet. Without `!important` here, toggling the
+     `hidden` attribute from JS has no visible effect on those elements. */
+  [hidden]{ display:none !important; }
   :root{
     --bg:#F1F4FB;
     --surface:#FFFFFF;
@@ -544,7 +550,7 @@
           <div class="stat-grid">
             <div class="stat-tile">
               <div class="stat-label">초과근무 시간</div>
-              <div class="stat-value mono" id="netHoursOut">0.00시간</div>
+              <div class="stat-value mono" id="netHoursOut">0시간 0분</div>
             </div>
             <div class="stat-tile">
               <div class="stat-label">예상 수당</div>
@@ -1280,7 +1286,7 @@
         '<span class="m-label">' + monthLabel(key) + '</span>' +
         '<span class="m-detail">' +
           '<span class="m-line">근무 합계 <b>' + fmtHM(rawMs) + '</b></span>' +
-          '<span class="m-line">급여 산정 <b>' + (payMs / HOUR_MS) + '시간</b></span>' +
+          '<span class="m-line">급여 산정 <b>' + fmtHM(payMs) + '</b></span>' +
           (shortMs > 0 ? '<span class="m-short">다음 시간까지 ' + Math.ceil(shortMs / 60000) + '분 남음</span>' : '') +
         '</span>' +
         '<span class="m-amount">' + fmtWon(amount) + '</span>' +
@@ -1771,59 +1777,61 @@
     renderMyCard();
     hideInitError();
     var ref = state.db.doc('teachers/' + state.myId);
-    var settled = false;
-    var watchdog = setTimeout(function(){
-      if (!settled) {
-        showInitError('구글시트 연결이 지연되고 있습니다. Apps Script 배포 권한이 "모든 사용자"로 되어 있는지 확인 후 다시 시도해주세요.');
-      }
-    }, 15000);
-    ref.get().then(function(snap){
-      if (!snap.exists) {
-        return ref.set({
-          name: state.myName, hourlyRate: 0, workStart: '08:50', workEnd: '16:50',
-          morningMinMin: MORNING_MIN_MS / 60000, dailyDeductMin: DAILY_DEDUCT_MS / 60000, dailyCapMin: DAILY_CAP_MS / 60000,
-          clockInAt: null, updatedAt: Date.now()
-        });
-      } else if (snap.data().name !== state.myName) {
-        return ref.update({ name: state.myName, updatedAt: Date.now() });
-      }
-    }).then(function(){
-      settled = true; clearTimeout(watchdog);
-      state.ready = true;
-      hideInitError();
-      renderMyCard();
-      unsubMy = ref.onSnapshot(function(snap){
-        state.myDoc = snap.exists ? snap.data() : { name: state.myName, hourlyRate: 0, clockInAt: null };
+    var attempt = 0;
+
+    // Apps Script hiccups are transient (confirmed via the Executions log -
+    // every run eventually succeeds), so instead of surfacing a scary error
+    // banner on the first failure, keep retrying quietly in the background
+    // with a capped backoff until it lands.
+    function loadInitial(){
+      attempt++;
+      ref.get().then(function(snap){
+        if (!snap.exists) {
+          return ref.set({
+            name: state.myName, hourlyRate: 0, workStart: '08:50', workEnd: '16:50',
+            morningMinMin: MORNING_MIN_MS / 60000, dailyDeductMin: DAILY_DEDUCT_MS / 60000, dailyCapMin: DAILY_CAP_MS / 60000,
+            clockInAt: null, updatedAt: Date.now()
+          });
+        } else if (snap.data().name !== state.myName) {
+          return ref.update({ name: state.myName, updatedAt: Date.now() });
+        }
+      }).then(function(){
+        state.ready = true;
         hideInitError();
         renderMyCard();
-      }, function(err){ console.error('my doc subscribe error', err); showInitError('실시간 동기화가 끊어졌습니다: ' + describeErr(err)); });
+        unsubMy = ref.onSnapshot(function(snap){
+          state.myDoc = snap.exists ? snap.data() : { name: state.myName, hourlyRate: 0, clockInAt: null };
+          hideInitError();
+          renderMyCard();
+        }, function(err){ console.warn('my doc subscribe error, retrying quietly', err); });
 
-      unsubTeachers = state.db.collection('teachers').onSnapshot(function(qs){
-        var map = {};
-        qs.docs.forEach(function(d){ map[d.id] = d.data(); });
-        state.teacherDocs = map;
-        renderBoard();
-      }, function(err){ console.error('teachers subscribe error', err); });
+        unsubTeachers = state.db.collection('teachers').onSnapshot(function(qs){
+          var map = {};
+          qs.docs.forEach(function(d){ map[d.id] = d.data(); });
+          state.teacherDocs = map;
+          renderBoard();
+        }, function(err){ console.error('teachers subscribe error', err); });
 
-      unsubSessions = state.db.collection('sessions')
-        .where('teacherId', '==', state.myId)
-        .orderBy('clockIn', 'desc')
-        .limit(200)
-        .onSnapshot(function(qs){
-          var rows = qs.docs.map(function(d){
-            var data = {};
-            var src = d.data() || {};
-            for (var k in src) { if (Object.prototype.hasOwnProperty.call(src, k)) data[k] = src[k]; }
-            data.id = d.id;
-            return data;
-          });
-          renderHistory(rows);
-        }, function(err){ console.error('sessions subscribe error', err); });
-    }).catch(function(err){
-      settled = true; clearTimeout(watchdog);
-      console.error('init teacher doc failed', err);
-      showInitError('근무 기록을 불러오지 못했습니다: ' + describeErr(err));
-    });
+        unsubSessions = state.db.collection('sessions')
+          .where('teacherId', '==', state.myId)
+          .orderBy('clockIn', 'desc')
+          .limit(200)
+          .onSnapshot(function(qs){
+            var rows = qs.docs.map(function(d){
+              var data = {};
+              var src = d.data() || {};
+              for (var k in src) { if (Object.prototype.hasOwnProperty.call(src, k)) data[k] = src[k]; }
+              data.id = d.id;
+              return data;
+            });
+            renderHistory(rows);
+          }, function(err){ console.error('sessions subscribe error', err); });
+      }).catch(function(err){
+        console.warn('init teacher doc failed, retrying quietly (attempt ' + attempt + ')', err);
+        setTimeout(loadInitial, Math.min(2000 * attempt, 15000));
+      });
+    }
+    loadInitial();
     startTicking();
   }
 
